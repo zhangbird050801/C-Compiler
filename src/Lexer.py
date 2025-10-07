@@ -25,7 +25,7 @@ PR = {
     '"': 78, '/*': 79, '*/': 80, '//': 81
 }
 
-ID, CONST_TEN, CONST_O, CONST_S, CONST_FLOAT, CONST_CHAR, STRING_ = 82, 83, 84, 85, 86, 87, 88
+ID, CONST_DECIMAL, CONST_OCTAL, CONST_HEX, CONST_FLOAT, CONST_CHAR, STRING_ = 82, 83, 84, 85, 86, 87, 88
 EOF = -1
 HEX_CHAR = '0123456789abcdefABCDEF'
 OCTAL_CHAR = '01234567'
@@ -34,6 +34,7 @@ ERRORS = {
     'INVALID_HEX': "无效的十六进制数",
     'INVALID_OCTAL_DIGIT': "无效的八进制数 '{}'",
     'UNEXPECTED_CHAR': "无效的字符常量",
+    'INVALID_FLOAT_EXPONENT': "无效的浮点数",
 }
 
 TOKEN = namedtuple('Token', ['type', 'attribute'])
@@ -129,8 +130,7 @@ class Lexer:
     def _id(self):
         tmp = ''
         while self.char is not None and (self.char.isalnum() or self.char == '_'):
-            tmp += self.char
-            self.next()
+            tmp += self.char; self.next()
 
         type_ = KEYWORDS.get(tmp, ID)
 
@@ -141,63 +141,64 @@ class Lexer:
 
     def _num(self):
         tmp = ''
+        flag = False
 
         if self.char == '0':
-            tmp += self.char
-            self.next()
+            _ = self.text[self.pos + 1] if self.pos + 1 < len(self.text) else None
 
-            if self.char in 'xX':
-                tmp += self.char
-                self.next()
-                _ = self.pos
+            if _ in 'xX':
+                tmp += self.char; self.next()
+                tmp += self.char; self.next()
+
+                s = self.pos
                 while self.char is not None and self.char in HEX_CHAR:
-                    tmp += self.char
-                    self.next()
-                if self.pos == _:
+                    tmp += self.char; self.next()
+                if self.pos == s:
                     self.error('INVALID_HEX')
-                return TOKEN(CONST_S, tmp)
+                return TOKEN(CONST_HEX, tmp)
+            elif _ is not None and _ in OCTAL_CHAR:
+                tmp += self.char; self.next()
+                while self.char is not None and self.char in OCTAL_CHAR:
+                    tmp += self.char; self.next()
+                if self.char is not None and self.char.isdigit():
+                    self.error('INVALID_OCTAL_DIGIT', self.char)
+                return TOKEN(CONST_OCTAL, tmp)
 
-            is_oct = False
-            while self.char is not None and self.char in OCTAL_CHAR:
-                is_oct = True
-                tmp += self.char
-                self.next()
-            if self.char is not None and self.char.isdigit():
-                self.error('INVALID_OCTAL_DIGIT', self.char)
-            if self.char == '.':
-                tmp += self.char
-                self.next()
-                while self.char is not None and self.char.isdigit():
-                    tmp += self.char
-                    self.next()
-                return TOKEN(CONST_FLOAT, tmp)
-            return TOKEN(CONST_O, tmp) if is_oct else TOKEN(CONST_TEN, tmp)
-        else:
+        while self.char is not None and self.char.isdigit():
+            tmp += self.char; self.next()
+
+        if self.char == '.':
+            flag = True
+            tmp += self.char; self.next()
             while self.char is not None and self.char.isdigit():
-                tmp += self.char
-                self.next()
-            if self.char == '.':
-                tmp += self.char
-                self.next()
-                while self.char is not None and self.char.isdigit():
-                    tmp += self.char
-                    self.next()
-                return TOKEN(CONST_FLOAT, tmp)
-            return TOKEN(CONST_TEN, tmp)
+                tmp += self.char; self.next()
+
+        if self.char in 'eE':
+            flag = True
+            tmp += self.char; self.next()
+            if self.char in '-+':
+                tmp += self.char; self.next()
+            if not (self.char and self.char.isdigit()):
+                self.error('INVALID_FLOAT_EXPONENT')
+            while self.char is not None and self.char.isdigit():
+                tmp += self.char; self.next()
+
+        if flag:
+            return TOKEN(CONST_FLOAT, tmp)
+        else:
+            return TOKEN(CONST_DECIMAL, tmp)
 
     def _str(self):
         tmp = ''
         self.next()
         while self.char is not None and self.char != '"':
-            tmp += self.char
-            self.next()
+            tmp += self.char; self.next()
         self.next()
         return TOKEN(STRING_, tmp)
 
     def _char(self):
         self.next()
-        tmp = self.char
-        self.next()
+        tmp = self.char; self.next()
         if self.char != "'":
             self.error('UNTERMINATED_CHAR', self.char)
         self.next()
@@ -250,6 +251,6 @@ if __name__ == '__main__':
     tokens = lexer.tokenize()
     for token in tokens:
         type_str = f"({token.type},"
-        print(f"{type_str:<8} {repr(token.attribute)})")
+        print(f"{type_str:<8} '{token.attribute}')")
 
     print(lexer.table)
