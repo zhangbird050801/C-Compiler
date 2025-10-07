@@ -1,5 +1,3 @@
-#include<stdio.h>
-
 int main() {
     int a = 0, b = 2;
     printf("Hello, world!\n");
@@ -13,6 +11,8 @@ int main() {
 
     float a, b;
     double c = 1.0008;
+    //int ff = 0xQQ;
+    //int xx = 099;
 
     return 0;
 }
