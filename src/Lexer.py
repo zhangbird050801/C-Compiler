@@ -25,8 +25,16 @@ PR = {
     '"': 78, '/*': 79, '*/': 80, '//': 81
 }
 
-ID, CONST_TEN, CONST_E, CONST_S, CONST_FLOAT, CONST_CHAR, STRING_ = 82, 83, 84, 85, 86, 87, 88
+ID, CONST_TEN, CONST_O, CONST_S, CONST_FLOAT, CONST_CHAR, STRING_ = 82, 83, 84, 85, 86, 87, 88
 EOF = -1
+HEX_CHAR = '0123456789abcdefABCDEF'
+OCTAL_CHAR = '01234567'
+
+ERRORS = {
+    'INVALID_HEX': "无效的十六进制数",
+    'INVALID_OCTAL_DIGIT': "无效的八进制数 '{}'",
+    'UNEXPECTED_CHAR': "无效的字符常量",
+}
 
 TOKEN = namedtuple('Token', ['type', 'attribute'])
 
@@ -90,6 +98,141 @@ def process(text):
 class Lexer:
     def __init__(self, text):
         self.text = text
+        self.pos = 0
+        self.line = 1
+        self.col = 1
+        self.table = SymbolTable()
+        self.char = self.text[self.pos] if self.text else None
+
+        # 按符号长度进行降序
+        # 使得长的优先匹配
+        t_ = {**OP, **DL}
+        self.symbols = sorted(t_.items(), key=lambda x: len(x[0]), reverse=True)
+
+    def error(self, error, *args):
+        m = ERRORS.get(error, "未知错误").format(*args)
+        raise Exception(f'{m} at line {self.line}')
+
+    def next(self):
+        if self.char == '\n':
+            self.line += 1
+            self.col = 0
+        self.pos += 1
+        self.col += 1
+        self.char = self.text[self.pos] if self.pos < len(self.text) else None
+
+    def skip(self):
+        while self.char is not None and self.char.isspace():
+            self.next()
+
+    # KEYWORDS or ID
+    def _id(self):
+        tmp = ''
+        while self.char is not None and (self.char.isalnum() or self.char == '_'):
+            tmp += self.char
+            self.next()
+
+        type_ = KEYWORDS.get(tmp, ID)
+
+        if type_ == ID:
+            self.table.add(tmp)
+
+        return TOKEN(type_, tmp)
+
+    def _num(self):
+        tmp = ''
+
+        if self.char == '0':
+            tmp += self.char
+            self.next()
+
+            if self.char in 'xX':
+                tmp += self.char
+                self.next()
+                _ = self.pos
+                while self.char is not None and self.char in HEX_CHAR:
+                    tmp += self.char
+                    self.next()
+                if self.pos == _:
+                    self.error('INVALID_HEX')
+                return TOKEN(CONST_S, tmp)
+
+            is_oct = False
+            while self.char is not None and self.char in OCTAL_CHAR:
+                is_oct = True
+                tmp += self.char
+                self.next()
+            if self.char is not None and self.char.isdigit():
+                self.error('INVALID_OCTAL_DIGIT', self.char)
+            if self.char == '.':
+                tmp += self.char
+                self.next()
+                while self.char is not None and self.char.isdigit():
+                    tmp += self.char
+                    self.next()
+                return TOKEN(CONST_FLOAT, tmp)
+            return TOKEN(CONST_O, tmp) if is_oct else TOKEN(CONST_TEN, tmp)
+        else:
+            while self.char is not None and self.char.isdigit():
+                tmp += self.char
+                self.next()
+            if self.char == '.':
+                tmp += self.char
+                self.next()
+                while self.char is not None and self.char.isdigit():
+                    tmp += self.char
+                    self.next()
+                return TOKEN(CONST_FLOAT, tmp)
+            return TOKEN(CONST_TEN, tmp)
+
+    def _str(self):
+        tmp = ''
+        self.next()
+        while self.char is not None and self.char != '"':
+            tmp += self.char
+            self.next()
+        self.next()
+        return TOKEN(STRING_, tmp)
+
+    def _char(self):
+        self.next()
+        tmp = self.char
+        self.next()
+        if self.char != "'":
+            self.error('UNTERMINATED_CHAR', self.char)
+        self.next()
+        return TOKEN(CONST_CHAR, tmp)
+
+    def next_token(self):
+        while self.char is not None:
+            self.skip()
+            _ = self.char
+            if _ is None:
+                continue
+            if _.isalpha() or _ == '_':
+                return self._id()
+            if _.isdigit():
+                return self._num()
+            if _ == '"':
+                return self._str()
+            if _ == "'":
+                return self._char()
+
+            for s, t in self.symbols:
+                if self.text.startswith(s, self.pos):
+                    for _ in range(len(s)): self.next()
+                    return TOKEN(t, s)
+            self.error('UNEXPECTED_CHAR')
+        return TOKEN(EOF, 'EOF')
+
+    def tokenize(self):
+        ans = []
+        _ = self.next_token()
+        while _.type != EOF:
+            ans.append(_)
+            _ = self.next_token()
+        ans.append(_)
+        return ans
 
 
 if __name__ == '__main__':
@@ -102,3 +245,11 @@ if __name__ == '__main__':
 
     code_ = process(code)
     print(code_)
+
+    lexer = Lexer(code_)
+    tokens = lexer.tokenize()
+    for token in tokens:
+        type_str = f"({token.type},"
+        print(f"{type_str:<8} {repr(token.attribute)})")
+
+    print(lexer.table)
