@@ -11,6 +11,9 @@ int main() {
 
     float a, b;
     double c = 1.0008;
+    int f = 0xF5;
+    int q = 077;
+    float x = 1e-5;
     //int ff = 0xQQ;
     //int xx = 099;
 
