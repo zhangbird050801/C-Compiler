@@ -39,6 +39,16 @@ ERRORS = {
 
 TOKEN = namedtuple('Token', ['type', 'attribute'])
 
+TYPES = {}
+for _ in KEYWORDS.values():
+    TYPES[_] = 'KEYWORD'
+for _ in OP.values():
+    TYPES[_] = 'OPERATOR'
+for _ in DL.values():
+    TYPES[_] = 'DELIMITER'
+TYPES[ID], TYPES[CONST_DECIMAL], TYPES[CONST_OCTAL], TYPES[CONST_HEX], TYPES[CONST_FLOAT], TYPES[CONST_CHAR], TYPES[STRING_], TYPES[EOF] \
+    = 'IDENTIFIER', 'CONST_DECIMAL', 'CONST_OCTAL', 'CONST_HEX', 'CONST_FLOAT', 'CONST_CHAR', 'STRING_LITERAL', 'EOF'
+
 class SymbolTable:
     def __init__(self):
         self.symbols = {}
@@ -245,12 +255,12 @@ if __name__ == '__main__':
         sys.exit(1)
 
     code_ = process(code)
-    print(code_)
+    # print(code_)
 
     lexer = Lexer(code_)
     tokens = lexer.tokenize()
     for token in tokens:
-        type_str = f"({token.type},"
-        print(f"{type_str:<8} '{token.attribute}')")
+        _ = TYPES.get(token.type, 'UNKNOWN')
+        print(f"( {_:<16} <{token.type}>: {token.attribute} )")
 
     print(lexer.table)
