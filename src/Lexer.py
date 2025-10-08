@@ -1,7 +1,7 @@
 import sys
 from collections import namedtuple
 
-file = 'c-code.txt'
+file = 'c-code.c'
 
 KEYWORDS = {
     'auto': 1, 'break': 2, 'case': 3, 'char': 4, 'const': 5, 'continue': 6, 'default': 7, 'do': 8,
