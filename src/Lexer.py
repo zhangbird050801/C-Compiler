@@ -36,6 +36,7 @@ ERRORS = {
     'UNEXPECTED_CHAR': "无效的字符常量",    
     'UNTERMINATED_STRING': "未结束的字符串常量 '{}' ",
     'INVALID_FLOAT_EXPONENT': "无效的浮点数",
+    'INVALID_IDENTIFIER': '无效的标识符',
 }
 
 TOKEN = namedtuple('Token', ['type', 'attribute'])
@@ -139,6 +140,10 @@ class Lexer:
 
     # KEYWORDS or ID
     def _id(self):
+        # 实际用不到这两行
+        if not (self.char and (self.char.isalpha() or self.char == '_')):
+            self.error('INVALID_IDENTIFIER')
+
         tmp = ''
         while self.char is not None and (self.char.isalnum() or self.char == '_'):
             tmp += self.char; self.next()
@@ -193,6 +198,9 @@ class Lexer:
                 self.error('INVALID_FLOAT_EXPONENT')
             while self.char is not None and self.char.isdigit():
                 tmp += self.char; self.next()
+
+        if self.char is not None and (self.char.isalpha() or self.char == '_'):
+            self.error('INVALID_IDENTIFIER')
 
         if flag:
             return TOKEN(CONST_FLOAT, tmp)
