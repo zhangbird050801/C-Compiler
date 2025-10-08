@@ -155,6 +155,26 @@ class Lexer:
 
         return TOKEN(type_, tmp)
 
+    def _float(self, tmp):
+        flag = False
+        if self.char == '.':
+            flag = True
+            tmp += self.char; self.next()
+            while self.char is not None and self.char.isdigit():
+                tmp += self.char; self.next()
+
+        if self.char in 'eE':
+            flag = True
+            tmp += self.char; self.next()
+            if self.char in '+-':
+                tmp += self.char; self.next()
+            if not (self.char and self.char.isdigit()):
+                self.error('INVALID_FLOAT_EXPONENT')
+            while self.char is not None and self.char.isdigit():
+                tmp += self.char; self.next()
+
+        return tmp, flag
+
     def _num(self):
         tmp = ''
         flag = False
@@ -184,47 +204,56 @@ class Lexer:
 
                 return TOKEN(CONST_OCTAL, tmp)
 
-            # float
-            if self.char == '.':
-                tmp += self.char; self.next()
-                while self.char is not None and self.char.isdigit():
-                    tmp += self.char; self.next()
-                if self.char in 'eE':
-                    tmp += self.char; self.next()
-                    if self.char in '+-':
-                        tmp += self.char; self.next()
-                    if not (self.char and self.char.isdigit()):
-                        self.error('INVALID_FLOAT_EXPONENT')
-                    while self.char is not None and self.char.isdigit():
-                        tmp += self.char; self.next()
+            tmp, flag = self._float(tmp)
+            if flag:
                 return TOKEN(CONST_FLOAT, tmp)
+
+            # # float
+            # if self.char == '.':
+            #     tmp += self.char; self.next()
+            #     while self.char is not None and self.char.isdigit():
+            #         tmp += self.char; self.next()
+            #     if self.char in 'eE':
+            #         tmp += self.char; self.next()
+            #         if self.char in '+-':
+            #             tmp += self.char; self.next()
+            #         if not (self.char and self.char.isdigit()):
+            #             self.error('INVALID_FLOAT_EXPONENT')
+            #         while self.char is not None and self.char.isdigit():
+            #             tmp += self.char; self.next()
+            #     return TOKEN(CONST_FLOAT, tmp)
 
             return TOKEN(CONST_DECIMAL, tmp)
 
         else:
-            flag = False
             while self.char is not None and self.char.isdigit():
                 tmp += self.char; self.next()
-            if self.char == '.':
-                flag = True
-                tmp += self.char; self.next()
-                while self.char is not None and self.char.isdigit():
-                    tmp += self.char; self.next()
-            if self.char in 'eE':
-                flag = True
-                tmp += self.char; self.next()
-                if self.char in '+-':
-                    tmp += self.char; self.next()
-                if not (self.char and self.char.isdigit()):
-                    self.error('INVALID_FLOAT_EXPONENT')
-                while self.char is not None and self.char.isdigit():
-                    tmp += self.char; self.next()
-            if self.char is not None and (self.char.isalpha() or self.char == '_'):
-                self.error('INVALID_IDENTIFIER')
+
+            tmp, flag = self._float(tmp)
             if flag:
                 return TOKEN(CONST_FLOAT, tmp)
-            else:
-                return TOKEN(CONST_DECIMAL, tmp)
+            # if self.char == '.':
+            #     flag = True
+            #     tmp += self.char; self.next()
+            #     while self.char is not None and self.char.isdigit():
+            #         tmp += self.char; self.next()
+            # if self.char in 'eE':
+            #     flag = True
+            #     tmp += self.char; self.next()
+            #     if self.char in '+-':
+            #         tmp += self.char; self.next()
+            #     if not (self.char and self.char.isdigit()):
+            #         self.error('INVALID_FLOAT_EXPONENT')
+            #     while self.char is not None and self.char.isdigit():
+            #         tmp += self.char; self.next()
+
+            if self.char is not None and (self.char.isalpha() or self.char == '_'):
+                self.error('INVALID_IDENTIFIER')
+
+            if flag:
+                return TOKEN(CONST_FLOAT, tmp)
+
+            return TOKEN(CONST_DECIMAL, tmp)
 
         # if self.char == '0':
         #     _ = self.text[self.pos + 1] if self.pos + 1 < len(self.text) else None
