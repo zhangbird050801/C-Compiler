@@ -1,151 +1,151 @@
-<mxfile host="65bd71144e">
-    <diagram id="sO3qi-ck56MG2Ycex6XJ" name="第 1 页">
-        <mxGraphModel dx="757" dy="592" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="1654" math="0" shadow="0">
-            <root>
-                <mxCell id="0"/>
-                <mxCell id="1" parent="0"/>
-                <mxCell id="2" value="&lt;b&gt;开始&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=3;fontStyle=1;fontSize=14;arcSize=50;" vertex="1" parent="1">
-                    <mxGeometry x="532" y="60" width="106" height="40" as="geometry"/>
-                </mxCell>
-                <mxCell id="3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="2" target="4">
-                    <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="584" y="110" as="sourcePoint"/>
-                        <mxPoint x="583.71" y="130" as="targetPoint"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="39" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=3;" edge="1" parent="1" source="4" target="38">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="4" value="&lt;b&gt;初始化内容tmp&lt;/b&gt;&lt;br&gt;读取开头的双引号(&quot;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=3;fontStyle=1;fontSize=13;" vertex="1" parent="1">
-                    <mxGeometry x="517" y="130" width="136" height="50" as="geometry"/>
-                </mxCell>
-                <mxCell id="5" value="&lt;b&gt;当前字符是双引号(&quot;)？&lt;/b&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=3;fontStyle=1;fontSize=13;" vertex="1" parent="1">
-                    <mxGeometry x="507" y="310" width="155" height="80" as="geometry"/>
-                </mxCell>
-                <mxCell id="6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="38" target="5">
-                    <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="584" y="290" as="sourcePoint"/>
-                        <mxPoint x="610" y="320" as="targetPoint"/>
-                        <Array as="points">
-                            <mxPoint x="585" y="310"/>
-                            <mxPoint x="585" y="310"/>
-                        </Array>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="7" value="&lt;b&gt;否&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;fontStyle=1;fontSize=12;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1">
-                    <mxGeometry x="-0.0051" relative="1" as="geometry">
-                        <mxPoint x="584.61" y="390" as="sourcePoint"/>
-                        <mxPoint x="585" y="440" as="targetPoint"/>
-                        <mxPoint as="offset"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="14" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=3;" edge="1" parent="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="769.03" y="600" as="sourcePoint"/>
-                        <mxPoint x="769.03" y="630" as="targetPoint"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="15" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=3;" edge="1" parent="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="769.37" y="680" as="sourcePoint"/>
-                        <mxPoint x="769.37" y="710" as="targetPoint"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="13" value="&lt;b&gt;是&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;fontStyle=1;fontSize=12;" edge="1" parent="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <Array as="points">
-                            <mxPoint x="770" y="350"/>
-                            <mxPoint x="770" y="550"/>
-                        </Array>
-                        <mxPoint x="662" y="350" as="sourcePoint"/>
-                        <mxPoint x="770" y="550" as="targetPoint"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="17" value="&lt;b&gt;当前字符是反斜杠(&#39;\&#39;)？&lt;/b&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=3;fontStyle=1;fontSize=13;" vertex="1" parent="1">
-                    <mxGeometry x="504" y="440" width="162" height="70" as="geometry"/>
-                </mxCell>
-                <mxCell id="18" value="是" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;fontStyle=1;fontSize=12;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="17" target="49">
-                    <mxGeometry x="-0.6635" relative="1" as="geometry">
-                        <mxPoint x="494" y="540" as="sourcePoint"/>
-                        <mxPoint x="360" y="570" as="targetPoint"/>
-                        <mxPoint as="offset"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="35" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;strokeWidth=3;" edge="1" parent="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="584.66" y="600" as="sourcePoint"/>
-                        <mxPoint x="584.66" y="640" as="targetPoint"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="26" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;strokeWidth=3;" edge="1" parent="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="584.66" y="690" as="sourcePoint"/>
-                        <mxPoint x="585" y="730" as="targetPoint"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="37" style="edgeStyle=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=3;" edge="1" parent="1" source="51" target="5">
-                    <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="527" y="755" as="sourcePoint"/>
-                        <Array as="points">
-                            <mxPoint x="280" y="755"/>
-                            <mxPoint x="280" y="350"/>
-                        </Array>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="33" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=3;" edge="1" parent="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="395" y="540" as="sourcePoint"/>
-                        <mxPoint x="395" y="640" as="targetPoint"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="36" style="edgeStyle=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=3;" edge="1" parent="1" source="45" target="48">
-                    <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="449" y="730" as="sourcePoint"/>
-                        <mxPoint x="517" y="730" as="targetPoint"/>
-                        <Array as="points"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="38" value="读取下一个字符" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=3;fontStyle=1;fontSize=13;" vertex="1" parent="1">
-                    <mxGeometry x="527" y="210" width="116" height="50" as="geometry"/>
-                </mxCell>
-                <mxCell id="42" value="&lt;b&gt;否&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;fontStyle=1;fontSize=12;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1">
-                    <mxGeometry x="-0.505" relative="1" as="geometry">
-                        <mxPoint x="584.5500000000001" y="510" as="sourcePoint"/>
-                        <mxPoint x="584.94" y="550" as="targetPoint"/>
-                        <mxPoint as="offset"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="44" value="读取下一个字符" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=3;fontStyle=1;fontSize=13;" vertex="1" parent="1">
-                    <mxGeometry x="527" y="550" width="116" height="50" as="geometry"/>
-                </mxCell>
-                <mxCell id="45" value="读取下一个字符" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=3;fontStyle=1;fontSize=13;" vertex="1" parent="1">
-                    <mxGeometry x="337" y="640" width="116" height="50" as="geometry"/>
-                </mxCell>
-                <mxCell id="48" value="将当前字符添加到tmp" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=3;fontStyle=1;fontSize=13;" vertex="1" parent="1">
-                    <mxGeometry x="517" y="640" width="140" height="50" as="geometry"/>
-                </mxCell>
-                <mxCell id="49" value="&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;&lt;font style=&quot;&quot;&gt;将反斜杠添加到tmp&lt;/font&gt;&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=3;fontStyle=1;fontSize=13;" vertex="1" parent="1">
-                    <mxGeometry x="330" y="550" width="130" height="50" as="geometry"/>
-                </mxCell>
-                <mxCell id="51" value="读取下一个字符" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=3;fontStyle=1;fontSize=13;" vertex="1" parent="1">
-                    <mxGeometry x="527" y="730" width="116" height="50" as="geometry"/>
-                </mxCell>
-                <mxCell id="52" value="读取结尾的双&lt;b&gt;引号&lt;/b&gt;&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;(&quot;)&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=3;fontStyle=1;fontSize=13;" vertex="1" parent="1">
-                    <mxGeometry x="700" y="550" width="138.75" height="50" as="geometry"/>
-                </mxCell>
-                <mxCell id="53" value="&lt;b&gt;识别为字符串常量&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=3;fontStyle=1;fontSize=13;" vertex="1" parent="1">
-                    <mxGeometry x="705.37" y="630" width="128" height="50" as="geometry"/>
-                </mxCell>
-                <mxCell id="59" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=3;" edge="1" parent="1" source="54" target="58">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="54" value="&lt;b&gt;返回TOKEN&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;strokeWidth=3;fontStyle=1;fontSize=13;" vertex="1" parent="1">
-                    <mxGeometry x="716.3000000000001" y="710" width="106.13" height="40" as="geometry"/>
-                </mxCell>
-                <mxCell id="58" value="&lt;b&gt;结束&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=3;fontStyle=1;fontSize=14;arcSize=50;" vertex="1" parent="1">
-                    <mxGeometry x="715.63" y="787" width="107.5" height="40" as="geometry"/>
-                </mxCell>
-            </root>
-        </mxGraphModel>
-    </diagram>
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36" version="28.2.5">
+  <diagram id="sO3qi-ck56MG2Ycex6XJ" name="第 1 页">
+    <mxGraphModel dx="1733" dy="1019" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="1654" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="2" value="&lt;b&gt;开始&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=3;fontStyle=1;fontSize=14;arcSize=50;" parent="1" vertex="1">
+          <mxGeometry x="532" y="60" width="106" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="2" target="4" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="584" y="110" as="sourcePoint" />
+            <mxPoint x="583.71" y="130" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="39" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=3;" parent="1" source="4" target="38" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="4" value="&lt;b&gt;初始化内容tmp&lt;/b&gt;&lt;br&gt;读取开头的双引号 &quot;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=3;fontStyle=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="517" y="130" width="136" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="5" value="&lt;b&gt;当前字符是双引号 &quot;&lt;/b&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=3;fontStyle=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="507" y="310" width="155" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="38" target="5" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="584" y="290" as="sourcePoint" />
+            <mxPoint x="610" y="320" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="585" y="310" />
+              <mxPoint x="585" y="310" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="7" value="&lt;b&gt;否&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;fontStyle=1;fontSize=12;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" parent="1" edge="1">
+          <mxGeometry x="-0.0051" relative="1" as="geometry">
+            <mxPoint x="584.61" y="390" as="sourcePoint" />
+            <mxPoint x="585" y="440" as="targetPoint" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="14" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=3;" parent="1" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="769.03" y="600" as="sourcePoint" />
+            <mxPoint x="769.03" y="630" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="15" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=3;" parent="1" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="769.37" y="680" as="sourcePoint" />
+            <mxPoint x="769.37" y="710" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="13" value="&lt;b&gt;是&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;fontStyle=1;fontSize=12;" parent="1" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="770" y="350" />
+              <mxPoint x="770" y="550" />
+            </Array>
+            <mxPoint x="662" y="350" as="sourcePoint" />
+            <mxPoint x="770" y="550" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="17" value="&lt;b&gt;当前字符是反斜杠 \&lt;/b&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=3;fontStyle=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="504" y="440" width="162" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="18" value="是" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;fontStyle=1;fontSize=12;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="17" target="49" edge="1">
+          <mxGeometry x="-0.6635" relative="1" as="geometry">
+            <mxPoint x="494" y="540" as="sourcePoint" />
+            <mxPoint x="360" y="570" as="targetPoint" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="35" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;strokeWidth=3;" parent="1" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="584.66" y="600" as="sourcePoint" />
+            <mxPoint x="584.66" y="640" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="26" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;strokeWidth=3;" parent="1" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="584.66" y="690" as="sourcePoint" />
+            <mxPoint x="585" y="730" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="37" style="edgeStyle=none;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=3;" parent="1" source="51" target="5" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="527" y="755" as="sourcePoint" />
+            <Array as="points">
+              <mxPoint x="280" y="755" />
+              <mxPoint x="280" y="350" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="33" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=3;" parent="1" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="395" y="540" as="sourcePoint" />
+            <mxPoint x="395" y="640" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="36" style="edgeStyle=none;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=3;" parent="1" source="45" target="48" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="449" y="730" as="sourcePoint" />
+            <mxPoint x="517" y="730" as="targetPoint" />
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="38" value="读取下一个字符" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=3;fontStyle=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="527" y="210" width="116" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="42" value="&lt;b&gt;否&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;fontStyle=1;fontSize=12;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" parent="1" edge="1">
+          <mxGeometry x="-0.505" relative="1" as="geometry">
+            <mxPoint x="584.5500000000001" y="510" as="sourcePoint" />
+            <mxPoint x="584.94" y="550" as="targetPoint" />
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="44" value="读取下一个字符" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=3;fontStyle=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="527" y="550" width="116" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="45" value="读取下一个字符" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=3;fontStyle=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="337" y="640" width="116" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="48" value="将当前字符添加到tmp" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=3;fontStyle=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="517" y="640" width="140" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="49" value="&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;&lt;font style=&quot;&quot;&gt;将反斜杠添加到tmp&lt;/font&gt;&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=3;fontStyle=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="330" y="550" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="51" value="读取下一个字符" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=3;fontStyle=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="527" y="730" width="116" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="52" value="读取结尾的双&lt;b&gt;引号&amp;nbsp;&lt;/b&gt;&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;&quot;&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=3;fontStyle=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="700" y="550" width="138.75" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="53" value="&lt;b&gt;识别为字符串常量&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=3;fontStyle=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="705.37" y="630" width="128" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="59" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=3;" parent="1" source="54" target="58" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="54" value="&lt;b&gt;返回TOKEN&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;strokeWidth=3;fontStyle=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="716.3000000000001" y="710" width="106.13" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="58" value="&lt;b&gt;结束&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=3;fontStyle=1;fontSize=14;arcSize=50;" parent="1" vertex="1">
+          <mxGeometry x="715.63" y="787" width="107.5" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
 </mxfile>
