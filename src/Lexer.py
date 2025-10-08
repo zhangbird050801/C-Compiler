@@ -33,7 +33,8 @@ OCTAL_CHAR = '01234567'
 ERRORS = {
     'INVALID_HEX': "无效的十六进制数",
     'INVALID_OCTAL_DIGIT': "无效的八进制数 '{}'",
-    'UNEXPECTED_CHAR': "无效的字符常量",
+    'UNEXPECTED_CHAR': "无效的字符常量",    
+    'UNTERMINATED_STRING': "未结束的字符串常量 '{}' ",
     'INVALID_FLOAT_EXPONENT': "无效的浮点数",
 }
 
@@ -202,15 +203,39 @@ class Lexer:
         tmp = ''
         self.next()
         while self.char is not None and self.char != '"':
-            tmp += self.char; self.next()
+            if self.char == '\\':
+                tmp += self.char; self.next()
+
+                if self.char is None:
+                    self.error('UNTERMINATED_STRING', self.char)
+                
+                tmp += self.char; self.next()
+            else:
+                tmp += self.char; self.next()
+
         self.next()
         return TOKEN(STRING_, tmp)
 
     def _char(self):
+        tmp = ''
         self.next()
-        tmp = self.char; self.next()
-        if self.char != "'":
+
+        if self.char is None:
             self.error('UNTERMINATED_CHAR', self.char)
+        
+        if self.char == '\\':
+            tmp += self.char; self.next()
+
+            if self.char is None:
+                self.error('UNTERMINATED_CHAR', self.char)
+            
+            tmp += self.char; self.next()
+        else:
+            tmp += self.char; self.next()
+
+        if self.char != "'":
+            self.error('UNEXPECTED_CHAR')
+
         self.next()
         return TOKEN(CONST_CHAR, tmp)
 
@@ -261,6 +286,14 @@ if __name__ == '__main__':
     tokens = lexer.tokenize()
     for token in tokens:
         _ = TYPES.get(token.type, 'UNKNOWN')
-        print(f"( {_:<16} <{token.type}>: {token.attribute} )")
+
+        if token.type == STRING_:
+            attr_ = f'"{token.attribute}"'
+        elif token.type == CONST_CHAR:
+            attr_ = f"'{token.attribute}'"
+        else:
+            attr_ = token.attribute
+
+        print(f"( {_:<16} <{token.type}>: {attr_} )")
 
     print(lexer.table)
