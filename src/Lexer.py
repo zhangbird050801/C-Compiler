@@ -230,8 +230,7 @@ class Lexer:
                 tmp += self.char; self.next()
 
             tmp, flag = self._float(tmp)
-            if flag:
-                return TOKEN(CONST_FLOAT, tmp)
+
             # if self.char == '.':
             #     flag = True
             #     tmp += self.char; self.next()
