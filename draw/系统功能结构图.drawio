@@ -1,0 +1,145 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36" version="28.2.5">
+  <diagram name="第 1 页" id="ukZ057iMxpZJFC8SNUqM">
+    <mxGraphModel dx="3253" dy="4191" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="main-system" value="&lt;b style=&quot;font-size:16px;&quot;&gt;C语言词法分析器系统&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=3;fontStyle=1;fontSize=14;" parent="1" vertex="1">
+          <mxGeometry x="650" y="-570" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="file-module" value="&lt;b&gt;文件读取模块&lt;/b&gt;&lt;br&gt;(main - file I/O)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=3;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="80" y="-330" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="preprocess-module" value="&lt;b&gt;词法预处理模块&lt;/b&gt;&lt;br&gt;(process)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=3;fontStyle=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="80" y="-80" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-main-file" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=none;jumpStyle=arc;jumpSize=6;endFill=0;" edge="1" parent="1" source="main-system" target="file-module">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-file-preprocess" value="&lt;b&gt;源代码文本&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=none;jumpStyle=arc;jumpSize=6;fontStyle=1;fontSize=11;endFill=0;" edge="1" parent="1" source="file-module" target="preprocess-module">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="lexer-module" value="&lt;b&gt;词法分析器模块&lt;/b&gt;&lt;br&gt;(Lexer)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=3;fontStyle=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="690" y="-410" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="symbol-module" value="&lt;b&gt;符号表管理模块&lt;/b&gt;&lt;br&gt;(SymbolTable)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=3;fontStyle=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="690" y="-1190" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="token-module" value="&lt;b&gt;Token定义模块&lt;/b&gt;&lt;br&gt;(常量定义)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=3;fontStyle=1;fontSize=13;" parent="1" vertex="1">
+          <mxGeometry x="1385" y="-240" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-main-lexer" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=none;jumpStyle=arc;jumpSize=6;endFill=0;" parent="1" source="main-system" target="lexer-module" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-main-symbol" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=none;jumpStyle=arc;jumpSize=6;endFill=0;" parent="1" source="main-system" target="symbol-module" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-main-token" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=none;jumpStyle=arc;jumpSize=6;endFill=0;" parent="1" source="main-system" target="token-module" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="comment-handle" value="&lt;b&gt;注释处理&lt;/b&gt;&lt;br&gt;(// 和 /* */)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=3;fontStyle=1;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="30" y="280" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="string-handle" value="&lt;b&gt;字符串保护&lt;/b&gt;&lt;br&gt;(引号内容)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=3;fontStyle=1;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="170" y="280" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-preprocess-comment" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=none;jumpStyle=arc;jumpSize=6;endFill=0;" parent="1" source="preprocess-module" target="comment-handle" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-preprocess-string" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=none;jumpStyle=arc;jumpSize=6;endFill=0;" parent="1" source="preprocess-module" target="string-handle" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="num-recognize" value="&lt;b&gt;数字识别&lt;/b&gt;&lt;br&gt;(_num)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=3;fontStyle=1;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="825" y="-130" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="str-recognize" value="&lt;b&gt;字符串识别&lt;/b&gt;&lt;br&gt;(_str)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=3;fontStyle=1;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="615" y="-130" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="char-recognize" value="&lt;b&gt;字符识别&lt;/b&gt;&lt;br&gt;(_char)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=3;fontStyle=1;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="495" y="-130" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-lexer-id" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=none;jumpStyle=arc;jumpSize=6;endFill=0;" parent="1" source="lexer-module" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="-130" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-lexer-num" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=none;jumpStyle=arc;jumpSize=6;endFill=0;" parent="1" source="lexer-module" target="num-recognize" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-lexer-str" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=none;jumpStyle=arc;jumpSize=6;endFill=0;" parent="1" source="lexer-module" target="str-recognize" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-lexer-char" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=none;jumpStyle=arc;jumpSize=6;endFill=0;" parent="1" source="lexer-module" target="char-recognize" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="symbol-add" value="&lt;b&gt;添加标识符&lt;/b&gt;&lt;br&gt;(add)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=3;fontStyle=1;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="1250" y="-1020" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="symbol-query" value="&lt;b&gt;查询符号&lt;/b&gt;&lt;br&gt;(symbols)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=3;fontStyle=1;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="1500" y="-1020" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-symbol-add" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=none;jumpStyle=arc;jumpSize=6;endFill=0;" parent="1" source="symbol-module" target="symbol-add" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-symbol-query" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=none;jumpStyle=arc;jumpSize=6;endFill=0;" parent="1" source="symbol-module" target="symbol-query" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="keyword-def" value="&lt;b&gt;关键字表&lt;/b&gt;&lt;br&gt;(KEYWORDS)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=3;fontStyle=1;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="1150" y="210" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="op-def" value="&lt;b&gt;运算符表&lt;/b&gt;&lt;br&gt;(OP)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=3;fontStyle=1;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="1410" y="210" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="dl-def" value="&lt;b&gt;定界符表&lt;/b&gt;&lt;br&gt;(DL)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=3;fontStyle=1;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="1030" y="210" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="const-def" value="&lt;b&gt;常量类型&lt;/b&gt;&lt;br&gt;(CONST_*)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=3;fontStyle=1;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="1280" y="210" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-token-keyword" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=none;jumpStyle=arc;jumpSize=6;endFill=0;" parent="1" source="token-module" target="keyword-def" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-token-op" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=none;jumpStyle=arc;jumpSize=6;endFill=0;" parent="1" source="token-module" target="op-def" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-token-dl" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=none;jumpStyle=arc;jumpSize=6;endFill=0;" parent="1" source="token-module" target="dl-def" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-token-const" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=none;jumpStyle=arc;jumpSize=6;endFill=0;" parent="1" source="token-module" target="const-def" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1335" y="-210" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="decimal-rec" value="&lt;b&gt;十进制&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;strokeWidth=2;fontStyle=1;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="695" y="-10" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="octal-rec" value="&lt;b&gt;八进制&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;strokeWidth=2;fontStyle=1;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="775" y="80" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="hex-rec" value="&lt;b&gt;十六进制&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;strokeWidth=2;fontStyle=1;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="840" y="170" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="float-rec" value="&lt;b&gt;浮点数&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b1ddf0;strokeColor=#10739e;strokeWidth=2;fontStyle=1;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="975" y="-10" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-num-decimal" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=none;jumpStyle=arc;jumpSize=6;endFill=0;" parent="1" source="num-recognize" target="decimal-rec" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-num-octal" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=none;jumpStyle=arc;jumpSize=6;endFill=0;" parent="1" source="num-recognize" target="octal-rec" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-num-hex" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=none;jumpStyle=arc;jumpSize=6;endFill=0;" parent="1" source="num-recognize" target="hex-rec" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-num-float" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;endArrow=none;jumpStyle=arc;jumpSize=6;endFill=0;" parent="1" source="num-recognize" target="float-rec" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="3jafQUHVMYMO-zxxj4Cc-3" value="&lt;b&gt;标识符识别&lt;/b&gt;&lt;br&gt;(_id)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=3;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="370" y="-130" width="110" height="50" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

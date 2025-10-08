@@ -1,0 +1,165 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36" version="28.2.5">
+  <diagram name="第 1 页" id="LQnpWy0xU33yD11m15NL">
+    <mxGraphModel dx="514" dy="293" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="1654" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="start" value="&lt;b style=&quot;font-size:14px;&quot;&gt;开始&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=3;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="354" y="30" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="read-file" value="&lt;b&gt;读取源代码文件&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=3;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="324" y="110" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-start-read" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="start" target="read-file">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="preprocess" value="&lt;b&gt;词法预处理&lt;/b&gt;&lt;br&gt;process(code)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=3;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="324" y="200" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-read-preprocess" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="read-file" target="preprocess">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="preprocess-detail" value="&lt;b&gt;去除单行注释&lt;/b&gt;&lt;br&gt;&lt;b&gt;去除多行注释&lt;/b&gt;&lt;br&gt;&lt;b&gt;保护字符串&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=2;fontStyle=1;fontSize=11;align=left;" vertex="1" parent="1">
+          <mxGeometry x="544" y="200" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="init-lexer" value="&lt;b&gt;初始化词法分析器&lt;/b&gt;&lt;br&gt;Lexer(code)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=3;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="324" y="290" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-preprocess-init" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="preprocess" target="init-lexer">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="call-tokenize" value="&lt;b&gt;调用tokenize()&lt;/b&gt;&lt;br&gt;开始词法分析" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=3;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="324" y="380" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-init-tokenize" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="init-lexer" target="call-tokenize">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="check-eof" value="&lt;b&gt;是否到达&lt;/b&gt;&lt;br&gt;&lt;b&gt;文件末尾?&lt;/b&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=3;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="329" y="470" width="170" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-tokenize-check" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="call-tokenize" target="check-eof">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="skip-space" value="&lt;b&gt;跳过空白字符&lt;/b&gt;&lt;br&gt;skip()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=3;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="334" y="590" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-check-skip" value="&lt;b&gt;否&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;fontStyle=1;fontSize=12;" edge="1" parent="1" source="check-eof" target="skip-space">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="check-char-type" value="&lt;b&gt;判断当前字符类型&lt;/b&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=3;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="309" y="700" width="210" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-skip-check-type" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="skip-space" target="check-char-type">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="is-alpha" value="&lt;b&gt;识别标识符或关键字&lt;/b&gt;&lt;br&gt;_id()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=3;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="20" y="915" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="is-digit" value="&lt;b&gt;识别数字常量&lt;/b&gt;&lt;br&gt;_num()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=3;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="290" y="1040" width="140" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="is-quote" value="&lt;b&gt;识别字符串&lt;/b&gt;&lt;br&gt;_str()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=3;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="450" y="970" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="is-single-quote" value="&lt;b&gt;识别字符&lt;/b&gt;&lt;br&gt;_char()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=3;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="600" y="950" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="is-symbol" value="&lt;b&gt;识别运算符/定界符&lt;/b&gt;&lt;br&gt;符号匹配" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=3;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="670" y="1160" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-type-alpha" value="&lt;b&gt;字母/_&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;fontStyle=1;fontSize=11;" edge="1" parent="1" source="check-char-type" target="is-alpha">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-type-digit" value="&lt;b&gt;数字&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;fontStyle=1;fontSize=11;" edge="1" parent="1" source="check-char-type" target="is-digit">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-type-quote" value="&lt;b&gt;双引号&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;fontStyle=1;fontSize=11;" edge="1" parent="1" source="check-char-type" target="is-quote">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-type-single" value="&lt;b&gt;单引号&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;fontStyle=1;fontSize=11;" edge="1" parent="1" source="check-char-type" target="is-single-quote">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-type-symbol" value="&lt;b&gt;其他符号&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;fontStyle=1;fontSize=11;" edge="1" parent="1" source="check-char-type" target="is-symbol">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="gen-token" value="&lt;b&gt;生成Token&lt;/b&gt;&lt;br&gt;(type, attribute)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=3;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="80" y="1280" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-alpha-token" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="is-alpha" target="gen-token">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-digit-token" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="is-digit" target="gen-token">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-quote-token" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="is-quote" target="gen-token">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-single-token" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="is-single-quote" target="gen-token">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="660" y="1150" />
+              <mxPoint x="170" y="1150" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-symbol-token" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="is-symbol" target="gen-token">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="750" y="1310" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="check-id" value="&lt;b&gt;是标识符?&lt;/b&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=3;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="100" y="1500" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-token-check-id" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="gen-token" target="check-id">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="add-symbol" value="&lt;b&gt;添加到符号表&lt;/b&gt;&lt;br&gt;table.add(name)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=3;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="730" y="1580" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-check-add" value="&lt;b&gt;是&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;fontStyle=1;fontSize=12;" edge="1" parent="1" source="check-id" target="add-symbol">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="save-token" value="&lt;b&gt;保存Token到列表&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=3;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="324" y="1590" width="180" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-check-save" value="&lt;b&gt;否&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;fontStyle=1;fontSize=12;" edge="1" parent="1" source="check-id" target="save-token">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="170" y="1615" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-add-save" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="add-symbol" target="save-token">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="730" y="1615" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-save-loop" value="&lt;b&gt;继续分析&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;fontStyle=1;fontSize=12;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="save-token" target="check-eof">
+          <mxGeometry x="-0.8" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="280" y="1615" />
+              <mxPoint x="280" y="510" />
+            </Array>
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="output-result" value="&lt;b&gt;输出Token列表&lt;/b&gt;&lt;br&gt;和符号表" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=3;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="564" y="480" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-eof-output" value="&lt;b&gt;是&lt;/b&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;fontStyle=1;fontSize=12;" edge="1" parent="1" source="check-eof" target="output-result">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="end" value="&lt;b style=&quot;font-size:14px;&quot;&gt;结束&lt;/b&gt;" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=3;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="790" y="485" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-output-end" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=3;endArrow=classic;jumpStyle=arc;jumpSize=6;" edge="1" parent="1" source="output-result" target="end">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
