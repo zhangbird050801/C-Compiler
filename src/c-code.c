@@ -13,6 +13,7 @@ int main() {
     double c = 123.0007;
     int f = 0xF5;
     int q = 077;
+    int test1 = 099;
     //int 1ab;
     float x = 1e4;
     float y = 1.2e-5;

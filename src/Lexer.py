@@ -88,18 +88,32 @@ def process(text):
 
         # //
         if c == '/' and i + 1 < l and text[i + 1] == '/':
+            code_.append(' ')  # 用空格替换 //
             i += 2
             while i < l and text[i] != '\n':
+                code_.append(' ')  # 用空格替换注释内容
                 i += 1
-            code_.append('\n')
+            if i < l:
+                code_.append('\n')  # 保留换行符
+                i += 1
             continue
         # /* */
         elif c == '/' and i + 1 < l and text[i + 1] == '*':
-            i += 2
+            code_.append(' ')  # 用空格替换 /
+            i += 1
+            code_.append(' ')  # 用空格替换 *
+            i += 1
             while i < l and not (i + 1 < l and text[i:i+2] == '*/'):
+                if text[i] == '\n':
+                    code_.append('\n')  # 保留换行符
+                else:
+                    code_.append(' ')  # 用空格替换注释内容
                 i += 1
-            i += 2
-            code_.append(' ')
+            if i + 1 < l:
+                code_.append(' ')  # 用空格替换 *
+                i += 1
+                code_.append(' ')  # 用空格替换 /
+                i += 1
             continue
 
         code_.append(c)
