@@ -25,21 +25,35 @@ PR = {
     '"': 78, '/*': 79, '*/': 80, '//': 81
 }
 
-ID, CONST_DECIMAL, CONST_OCTAL, CONST_HEX, CONST_FLOAT, CONST_CHAR, STRING_ = 82, 83, 84, 85, 86, 87, 88
+ID, CONST_DECIMAL, CONST_OCTAL, CONST_HEX, CONST_FLOAT, CONST_CHAR, STRING_, PREPROCESSOR = 82, 83, 84, 85, 86, 87, 88, 89
 EOF = -1
 HEX_CHAR = '0123456789abcdefABCDEF'
 OCTAL_CHAR = '01234567'
+MAX_IDENTIFIER_LENGTH = 63  # C99 标准建议至少 63 个字符
+VALID_ESCAPE_CHARS = 'abfnrtvxo\\\'"?0123456789'  # 合法的转义字符
 
 ERRORS = {
     'INVALID_HEX': "无效的十六进制数",
     'INVALID_OCTAL_DIGIT': "无效的八进制数",
     'UNEXPECTED_CHAR': "无效的字符常量",    
-    'UNTERMINATED_STRING': "未结束的字符串常量 '{}' ",
+    'UNTERMINATED_STRING': "未结束的字符串常量",
     'INVALID_FLOAT_EXPONENT': "无效的浮点数",
     'INVALID_IDENTIFIER': '无效的标识符',
+    'UNTERMINATED_CHAR': "未结束的字符常量",
+    'EMPTY_CHAR': "空字符常量",
+    'MULTI_CHAR': "字符常量包含多个字符",
+    'INVALID_ESCAPE': "无效的转义序列",
+    'STRING_NEWLINE': "字符串中包含未转义的换行符",
+    'UNTERMINATED_COMMENT': "未闭合的块注释",
+    'IDENTIFIER_TOO_LONG': "标识符长度超过限制",
+    'UNKNOWN_CHAR': "未知字符",
 }
 
-TOKEN = namedtuple('Token', ['type', 'attribute'])
+TOKEN = namedtuple('Token', ['type', 'attribute', 'is_error'])
+
+# 创建token的辅助函数
+def make_token(type_, attr, is_error=False):
+    return TOKEN(type_, attr, is_error)
 
 TYPES = {}
 for _ in KEYWORDS.values():
@@ -48,8 +62,8 @@ for _ in OP.values():
     TYPES[_] = 'OPERATOR'
 for _ in DL.values():
     TYPES[_] = 'DELIMITER'
-TYPES[ID], TYPES[CONST_DECIMAL], TYPES[CONST_OCTAL], TYPES[CONST_HEX], TYPES[CONST_FLOAT], TYPES[CONST_CHAR], TYPES[STRING_], TYPES[EOF] \
-    = 'IDENTIFIER', 'CONST_DECIMAL', 'CONST_OCTAL', 'CONST_HEX', 'CONST_FLOAT', 'CONST_CHAR', 'STRING_LITERAL', 'EOF'
+TYPES[ID], TYPES[CONST_DECIMAL], TYPES[CONST_OCTAL], TYPES[CONST_HEX], TYPES[CONST_FLOAT], TYPES[CONST_CHAR], TYPES[STRING_], TYPES[PREPROCESSOR], TYPES[EOF] \
+    = 'IDENTIFIER', 'CONST_DECIMAL', 'CONST_OCTAL', 'CONST_HEX', 'CONST_FLOAT', 'CONST_CHAR', 'STRING_LITERAL', 'PREPROCESSOR', 'EOF'
 
 class SymbolTable:
     def __init__(self):
@@ -61,7 +75,24 @@ class SymbolTable:
         return self.symbols[name]
 
     def __str__(self):
-        return str(self.symbols)
+        if not self.symbols:
+            return "符号表为空"
+        
+        result = ["\n" + "="*50]
+        result.append("符号表 (Symbol Table)")
+        result.append("="*50)
+        result.append(f"{'序号':<6} {'标识符':<20} {'类型':<15}")
+        result.append("-"*50)
+        
+        for idx, (name, info) in enumerate(self.symbols.items(), 1):
+            type_str = info['type'] if info['type'] else '未定义'
+            result.append(f"{idx:<6} {name:<20} {type_str:<15}")
+        
+        result.append("="*50)
+        result.append(f"总计: {len(self.symbols)} 个标识符")
+        result.append("="*50)
+        
+        return "\n".join(result)
 
 
 def process(text):
@@ -70,6 +101,8 @@ def process(text):
 
     i = 0
     l = len(text)
+    line_num = 1  # 从1开始，匹配源文件行号
+    
     while i < l:
         c = text[i]
 
@@ -83,6 +116,8 @@ def process(text):
 
         if string_ or char_:
             code_.append(c)
+            if c == '\n':
+                line_num += 1
             i += 1
             continue
 
@@ -95,10 +130,12 @@ def process(text):
                 i += 1
             if i < l:
                 code_.append('\n')  # 保留换行符
+                line_num += 1
                 i += 1
             continue
         # /* */
         elif c == '/' and i + 1 < l and text[i + 1] == '*':
+            comment_start_line = line_num
             code_.append(' ')  # 用空格替换 /
             i += 1
             code_.append(' ')  # 用空格替换 *
@@ -106,6 +143,7 @@ def process(text):
             while i < l and not (i + 1 < l and text[i:i+2] == '*/'):
                 if text[i] == '\n':
                     code_.append('\n')  # 保留换行符
+                    line_num += 1
                 else:
                     code_.append(' ')  # 用空格替换注释内容
                 i += 1
@@ -114,9 +152,14 @@ def process(text):
                 i += 1
                 code_.append(' ')  # 用空格替换 /
                 i += 1
+            else:
+                # 未闭合的块注释
+                print(f">>> 错误: 未闭合的块注释 at line {comment_start_line}")
             continue
 
         code_.append(c)
+        if c == '\n':
+            line_num += 1
         i += 1
 
     return "".join(code_)
@@ -130,15 +173,21 @@ class Lexer:
         self.col = 1
         self.table = SymbolTable()
         self.char = self.text[self.pos] if self.text else None
+        self.errors = []  # 存储错误信息
 
         # 按符号长度进行降序
         # 使得长的优先匹配
         t_ = {**OP, **DL}
         self.symbols = sorted(t_.items(), key=lambda x: len(x[0]), reverse=True)
 
-    def error(self, error, *args):
+    def error(self, error, content='', *args):
         m = ERRORS.get(error, "未知错误").format(*args)
-        raise Exception(f'{m} at line {self.line}')
+        if content:
+            error_msg = f'错误: {m}, 内容: "{content}" at line {self.line}'
+        else:
+            error_msg = f'错误: {m} at line {self.line}'
+        self.errors.append(error_msg)
+        return error_msg
 
     def next(self):
         if self.char == '\n':
@@ -156,21 +205,26 @@ class Lexer:
     def _id(self):
         # 实际用不到这两行
         if not (self.char and (self.char.isalpha() or self.char == '_')):
-            self.error('INVALID_IDENTIFIER')
+            self.error('INVALID_IDENTIFIER', '')
 
         tmp = ''
         while self.char is not None and (self.char.isalnum() or self.char == '_'):
             tmp += self.char; self.next()
+
+        # 检查标识符长度（已禁用）
+        # if len(tmp) > MAX_IDENTIFIER_LENGTH:
+        #     self.error('IDENTIFIER_TOO_LONG', tmp)
 
         type_ = KEYWORDS.get(tmp, ID)
 
         if type_ == ID:
             self.table.add(tmp)
 
-        return TOKEN(type_, tmp)
+        return make_token(type_, tmp)
 
     def _float(self, tmp):
         flag = False
+        error_flag = False
         if self.char == '.':
             flag = True
             tmp += self.char; self.next()
@@ -183,15 +237,18 @@ class Lexer:
             if self.char in '+-':
                 tmp += self.char; self.next()
             if not (self.char and self.char.isdigit()):
-                self.error('INVALID_FLOAT_EXPONENT')
+                self.error('INVALID_FLOAT_EXPONENT', tmp)
+                error_flag = True
+                return tmp, flag, error_flag
             while self.char is not None and self.char.isdigit():
                 tmp += self.char; self.next()
 
-        return tmp, flag
+        return tmp, flag, error_flag
 
     def _num(self):
         tmp = ''
         flag = False
+        is_error = False
 
         if self.char == '0':
             tmp += self.char
@@ -205,157 +262,155 @@ class Lexer:
                 while self.char is not None and self.char in HEX_CHAR:
                     tmp += self.char; self.next()
                 if _ == self.pos or (self.char is not None and self.char.isalpha()):
-                    self.error('INVALID_HEX')
-                return TOKEN(CONST_HEX, tmp)
+                    # 先把剩余非法字符收集完整
+                    while self.char is not None and (self.char.isalnum() or self.char == '_'):
+                        tmp += self.char; self.next()
+                    # 再报错
+                    self.error('INVALID_HEX', tmp)
+                    is_error = True
+                return make_token(CONST_HEX, tmp, is_error)
 
             # 8
             if self.char is not None and self.char.isdigit():
                 while self.char is not None and self.char in OCTAL_CHAR:
                     tmp += self.char; self.next()
 
-                if self.char is not None and self.char.isdigit() or self.char.isalpha():
-                    self.error('INVALID_OCTAL_DIGIT')
+                if self.char is not None and (self.char.isdigit() or self.char.isalpha()):
+                    # 先把剩余非法字符收集完整
+                    while self.char is not None and (self.char.isalnum() or self.char == '_'):
+                        tmp += self.char; self.next()
+                    # 再报错，这样错误信息里就是完整的内容
+                    self.error('INVALID_OCTAL_DIGIT', tmp)
+                    is_error = True
 
-                return TOKEN(CONST_OCTAL, tmp)
+                return make_token(CONST_OCTAL, tmp, is_error)
 
-            tmp, flag = self._float(tmp)
+            tmp, flag, is_error = self._float(tmp)
             if flag:
-                return TOKEN(CONST_FLOAT, tmp)
+                return make_token(CONST_FLOAT, tmp, is_error)
 
-            # # float
-            # if self.char == '.':
-            #     tmp += self.char; self.next()
-            #     while self.char is not None and self.char.isdigit():
-            #         tmp += self.char; self.next()
-            #     if self.char in 'eE':
-            #         tmp += self.char; self.next()
-            #         if self.char in '+-':
-            #             tmp += self.char; self.next()
-            #         if not (self.char and self.char.isdigit()):
-            #             self.error('INVALID_FLOAT_EXPONENT')
-            #         while self.char is not None and self.char.isdigit():
-            #             tmp += self.char; self.next()
-            #     return TOKEN(CONST_FLOAT, tmp)
+            # 检查 0 后面是否跟着字母（如 0as）
+            if self.char is not None and (self.char.isalpha() or self.char == '_'):
+                # 先把剩余非法字符收集完整
+                while self.char is not None and (self.char.isalnum() or self.char == '_'):
+                    tmp += self.char; self.next()
+                # 再报错
+                self.error('INVALID_IDENTIFIER', tmp)
+                is_error = True
 
-            return TOKEN(CONST_DECIMAL, tmp)
+            return make_token(CONST_DECIMAL, tmp, is_error)
 
         else:
             while self.char is not None and self.char.isdigit():
                 tmp += self.char; self.next()
 
-            tmp, flag = self._float(tmp)
-
-            # if self.char == '.':
-            #     flag = True
-            #     tmp += self.char; self.next()
-            #     while self.char is not None and self.char.isdigit():
-            #         tmp += self.char; self.next()
-            # if self.char in 'eE':
-            #     flag = True
-            #     tmp += self.char; self.next()
-            #     if self.char in '+-':
-            #         tmp += self.char; self.next()
-            #     if not (self.char and self.char.isdigit()):
-            #         self.error('INVALID_FLOAT_EXPONENT')
-            #     while self.char is not None and self.char.isdigit():
-            #         tmp += self.char; self.next()
+            tmp, flag, is_error = self._float(tmp)
 
             if self.char is not None and (self.char.isalpha() or self.char == '_'):
-                self.error('INVALID_IDENTIFIER')
+                # 先把剩余非法字符收集完整
+                while self.char is not None and (self.char.isalnum() or self.char == '_'):
+                    tmp += self.char; self.next()
+                # 再报错
+                self.error('INVALID_IDENTIFIER', tmp)
+                is_error = True
 
             if flag:
-                return TOKEN(CONST_FLOAT, tmp)
+                return make_token(CONST_FLOAT, tmp, is_error)
 
-            return TOKEN(CONST_DECIMAL, tmp)
-
-        # if self.char == '0':
-        #     _ = self.text[self.pos + 1] if self.pos + 1 < len(self.text) else None
-        #
-        #     if _ in 'xX':
-        #         tmp += self.char; self.next()
-        #         tmp += self.char; self.next()
-        #
-        #         s = self.pos
-        #         while self.char is not None and self.char in HEX_CHAR:
-        #             tmp += self.char; self.next()
-        #         if self.pos == s:
-        #             self.error('INVALID_HEX')
-        #         return TOKEN(CONST_HEX, tmp)
-        #     elif _ is not None and _ in OCTAL_CHAR:
-        #         tmp += self.char; self.next()
-        #         while self.char is not None and self.char in OCTAL_CHAR:
-        #             tmp += self.char; self.next()
-        #         if self.char is not None and self.char.isdigit():
-        #             self.error('INVALID_OCTAL_DIGIT', self.char)
-        #         return TOKEN(CONST_OCTAL, tmp)
-        #
-        # while self.char is not None and self.char.isdigit():
-        #     tmp += self.char; self.next()
-        #
-        # if self.char == '.':
-        #     flag = True
-        #     tmp += self.char; self.next()
-        #     while self.char is not None and self.char.isdigit():
-        #         tmp += self.char; self.next()
-        #
-        # if self.char in 'eE':
-        #     flag = True
-        #     tmp += self.char; self.next()
-        #     if self.char in '-+':
-        #         tmp += self.char; self.next()
-        #     if not (self.char and self.char.isdigit()):
-        #         self.error('INVALID_FLOAT_EXPONENT')
-        #     while self.char is not None and self.char.isdigit():
-        #         tmp += self.char; self.next()
-        #
-        # if self.char is not None and (self.char.isalpha() or self.char == '_'):
-        #     self.error('INVALID_IDENTIFIER')
-        #
-        # if flag:
-        #     return TOKEN(CONST_FLOAT, tmp)
-        # else:
-        #     return TOKEN(CONST_DECIMAL, tmp)
-
+            return make_token(CONST_DECIMAL, tmp, is_error)
 
     def _str(self):
         tmp = ''
+        is_error = False
         self.next()
-        while self.char is not None and self.char != '"':
+        while self.char is not None and self.char != '"' and self.char != '\n':
             if self.char == '\\':
                 tmp += self.char; self.next()
 
                 if self.char is None:
-                    self.error('UNTERMINATED_STRING', self.char)
+                    self.error('UNTERMINATED_STRING', tmp)
+                    is_error = True
+                    break
+                
+                # 检查转义字符是否合法（可选，比较宽松的检查）
+                # if self.char not in VALID_ESCAPE_CHARS:
+                #     self.error('INVALID_ESCAPE', f"\\{self.char}")
                 
                 tmp += self.char; self.next()
             else:
                 tmp += self.char; self.next()
 
-        self.next()
-        return TOKEN(STRING_, tmp)
+        # 遇到换行符（字符串跨行）
+        if self.char == '\n':
+            self.error('STRING_NEWLINE', tmp)
+            is_error = True
+        # 正常结束
+        elif self.char == '"':
+            self.next()
+        # 文件结束但字符串未闭合
+        else:
+            self.error('UNTERMINATED_STRING', tmp)
+            is_error = True
+            
+        return make_token(STRING_, tmp, is_error)
 
     def _char(self):
         tmp = ''
+        is_error = False
+        start_line = self.line
         self.next()
 
+        # 空字符常量 ''
+        if self.char == "'":
+            self.error('EMPTY_CHAR', '')
+            self.next()
+            return make_token(CONST_CHAR, tmp, True)
+
         if self.char is None:
-            self.error('UNTERMINATED_CHAR', self.char)
+            self.error('UNTERMINATED_CHAR', tmp)
+            return make_token(CONST_CHAR, tmp, True)
         
         if self.char == '\\':
             tmp += self.char; self.next()
 
             if self.char is None:
-                self.error('UNTERMINATED_CHAR', self.char)
+                self.error('UNTERMINATED_CHAR', tmp)
+                return make_token(CONST_CHAR, tmp, True)
+            
+            # 检查转义字符（可选）
+            # if self.char not in VALID_ESCAPE_CHARS:
+            #     self.error('INVALID_ESCAPE', f"\\{self.char}")
+            #     is_error = True
             
             tmp += self.char; self.next()
         else:
             tmp += self.char; self.next()
 
-        if self.char != "'":
-            self.error('UNEXPECTED_CHAR')
+        # 检查是否是多字符常量（如 'abc'）
+        if self.char != "'" and self.char is not None and self.char != '\n':
+            # 收集所有额外字符
+            extra_chars = ''
+            while self.char is not None and self.char != "'" and self.char != '\n':
+                extra_chars += self.char
+                self.next()
+            self.error('MULTI_CHAR', tmp + extra_chars)
+            is_error = True
 
-        self.next()
-        return TOKEN(CONST_CHAR, tmp)
+        if self.char != "'":
+            self.error('UNTERMINATED_CHAR', tmp)
+            is_error = True
+        else:
+            self.next()
+            
+        return make_token(CONST_CHAR, tmp, is_error)
+
+    def _preprocessor(self):
+        """处理预处理指令 如 #include, #define 等"""
+        tmp = ''
+        while self.char is not None and self.char != '\n':
+            tmp += self.char
+            self.next()
+        return make_token(PREPROCESSOR, tmp.strip())
 
     def next_token(self):
         while self.char is not None:
@@ -363,6 +418,11 @@ class Lexer:
             _ = self.char
             if _ is None:
                 continue
+            
+            # 处理预处理指令
+            if _ == '#':
+                return self._preprocessor()
+            
             if _.isalpha() or _ == '_':
                 return self._id()
             if _.isdigit():
@@ -375,9 +435,13 @@ class Lexer:
             for s, t in self.symbols:
                 if self.text.startswith(s, self.pos):
                     for _ in range(len(s)): self.next()
-                    return TOKEN(t, s)
-            self.error('UNEXPECTED_CHAR')
-        return TOKEN(EOF, 'EOF')
+                    return make_token(t, s)
+            
+            # 遇到无法识别的字符，记录错误但继续
+            unknown_char = self.char
+            self.error('UNKNOWN_CHAR', unknown_char)
+            self.next()  # 跳过这个字符继续解析
+        return make_token(EOF, 'EOF')
 
     def tokenize(self):
         ans = []
@@ -402,7 +466,17 @@ if __name__ == '__main__':
 
     lexer = Lexer(code_)
     tokens = lexer.tokenize()
+    
+    # 输出所有token，遇到错误立即显示
     for token in tokens:
+        if token.is_error:
+            # 立即输出错误信息
+            for error in lexer.errors:
+                if token.attribute in error:  # 找到对应的错误信息
+                    print(f">>> {error}")
+                    break
+            continue  # 跳过有错误的token，不输出到正常列表
+            
         _ = TYPES.get(token.type, 'UNKNOWN')
 
         if token.type == STRING_:
@@ -415,3 +489,11 @@ if __name__ == '__main__':
         print(f"( {_:<16} <{token.type}>: {attr_} )")
 
     print(lexer.table)
+    
+    # 输出所有错误汇总
+    if lexer.errors:
+        print("\n" + "="*50)
+        print("词法分析过程中发现以下错误:")
+        print("="*50)
+        for error in lexer.errors:
+            print(error)
