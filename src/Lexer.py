@@ -247,77 +247,123 @@ class Lexer:
 
     def _num(self):
         tmp = ''
-        flag = False
         is_error = False
 
+        # --- [BUG 1 修复] ---
+        # 专门处理以 '.' 开头的浮点数 (如 .123)
+        if self.char == '.':
+            tmp += self.char
+            self.next()  # 消耗 '.'
+
+            # 消耗小数点后的所有数字
+            while self.char is not None and self.char.isdigit():
+                tmp += self.char
+                self.next()
+
+            # 检查 'e' 或 'E' 的指数部分
+            if self.char in 'eE':
+                tmp += self.char;
+                self.next()
+                if self.char in '+-':
+                    tmp += self.char;
+                    self.next()
+                if not (self.char and self.char.isdigit()):
+                    self.error('INVALID_FLOAT_EXPONENT', tmp)
+                    is_error = True
+                while self.char is not None and self.char.isdigit():
+                    tmp += self.char;
+                    self.next()
+
+            # 检查是否有非法的后缀 (如 .123abc)
+            if self.char is not None and (self.char.isalpha() or self.char == '_'):
+                while self.char is not None and (self.char.isalnum() or self.char == '_'):
+                    tmp += self.char;
+                    self.next()
+                self.error('INVALID_IDENTIFIER', tmp)
+                is_error = True
+
+            return make_token(CONST_FLOAT, tmp, is_error)
+        # --- [BUG 1 修复结束] ---
+
+        # --- [BUG 2 修复：统一的数字处理逻辑] ---
+
+        # 1. 检查是否可能为八进制 (以 0 开头)
+        is_octal_candidate = False
         if self.char == '0':
+            is_octal_candidate = True
             tmp += self.char
             self.next()
 
-            # 16
+            # 2. 检查是否为十六进制 (如果是，则特殊处理并立即返回)
             if self.char in 'xX':
-                tmp += self.char; self.next()
-
+                tmp += self.char;
+                self.next()
                 _ = self.pos
                 while self.char is not None and self.char in HEX_CHAR:
-                    tmp += self.char; self.next()
-                if _ == self.pos or (self.char is not None and self.char.isalpha()):
-                    # 先把剩余非法字符收集完整
+                    tmp += self.char;
+                    self.next()
+
+                # 检查 0x 后面是否跟了非法字符
+                if _ == self.pos or (self.char is not None and (self.char.isalnum() or self.char == '_')):
                     while self.char is not None and (self.char.isalnum() or self.char == '_'):
-                        tmp += self.char; self.next()
-                    # 再报错
+                        tmp += self.char;
+                        self.next()
                     self.error('INVALID_HEX', tmp)
                     is_error = True
                 return make_token(CONST_HEX, tmp, is_error)
 
-            # 8
-            if self.char is not None and self.char.isdigit():
-                while self.char is not None and self.char in OCTAL_CHAR:
-                    tmp += self.char; self.next()
+        # 3. 消耗所有剩余的连续数字 (十进制或八进制)
+        while self.char is not None and self.char.isdigit():
+            tmp += self.char
+            self.next()
 
-                if self.char is not None and (self.char.isdigit() or self.char.isalpha()):
-                    # 先把剩余非法字符收集完整
-                    while self.char is not None and (self.char.isalnum() or self.char == '_'):
-                        tmp += self.char; self.next()
-                    # 再报错，这样错误信息里就是完整的内容
-                    self.error('INVALID_OCTAL_DIGIT', tmp)
-                    is_error = True
+        # 4. 检查是否为浮点数 (e.g., "01" -> "01.23", "123" -> "123e4")
+        if self.char == '.' or self.char in 'eE':
+            is_octal_candidate = False  # 肯定是浮点数了
+            # _float 会处理 . 和 eE 后面的所有部分
+            tmp, flag, is_error_float = self._float(tmp)
+            is_error = is_error or is_error_float
 
-                return make_token(CONST_OCTAL, tmp, is_error)
-
-            tmp, flag, is_error = self._float(tmp)
-            if flag:
-                return make_token(CONST_FLOAT, tmp, is_error)
-
-            # 检查 0 后面是否跟着字母（如 0as）
+            # 检查浮点数后面是否有非法后缀
             if self.char is not None and (self.char.isalpha() or self.char == '_'):
-                # 先把剩余非法字符收集完整
                 while self.char is not None and (self.char.isalnum() or self.char == '_'):
-                    tmp += self.char; self.next()
-                # 再报错
+                    tmp += self.char;
+                    self.next()
                 self.error('INVALID_IDENTIFIER', tmp)
                 is_error = True
 
-            return make_token(CONST_DECIMAL, tmp, is_error)
+            return make_token(CONST_FLOAT, tmp, is_error)
 
-        else:
-            while self.char is not None and self.char.isdigit():
-                tmp += self.char; self.next()
+        # 5. 检查是否跟了非法标识符 (e.g., "123abc")
+        if self.char is not None and (self.char.isalpha() or self.char == '_'):
+            while self.char is not None and (self.char.isalnum() or self.char == '_'):
+                tmp += self.char;
+                self.next()
+            self.error('INVALID_IDENTIFIER', tmp)
+            is_error = True
+            # 注意：即使是 "01abc" (非法标识符)，它首先是个非法的八进制数
+            # 但报告为 INVALID_IDENTIFIER 更合适
 
-            tmp, flag, is_error = self._float(tmp)
+        # 6. 如果不是浮点数，现在判断是十进制还是八进制
+        has_invalid_octal_digit = False
+        if is_octal_candidate:
+            # 检查是否包含 8 或 9 (e.g., "08", "019")
+            for char in tmp[1:]:  # 检查 '0' 后面的所有数字
+                if char not in OCTAL_CHAR:
+                    has_invalid_octal_digit = True
+                    break
 
-            if self.char is not None and (self.char.isalpha() or self.char == '_'):
-                # 先把剩余非法字符收集完整
-                while self.char is not None and (self.char.isalnum() or self.char == '_'):
-                    tmp += self.char; self.next()
-                # 再报错
-                self.error('INVALID_IDENTIFIER', tmp)
-                is_error = True
+        if has_invalid_octal_digit:
+            self.error('INVALID_OCTAL_DIGIT', tmp)
+            is_error = True
+            return make_token(CONST_OCTAL, tmp, is_error)  # 报告为无效八进制
 
-            if flag:
-                return make_token(CONST_FLOAT, tmp, is_error)
+        if is_octal_candidate and len(tmp) > 0:
+            # 它是 '0' 或者 '0123' 这种合法的八进制
+            return make_token(CONST_OCTAL, tmp, is_error)
 
-            return make_token(CONST_DECIMAL, tmp, is_error)
+        # 剩下的都是合法的十进制数
+        return make_token(CONST_DECIMAL, tmp, is_error)
 
     def _str(self):
         tmp = ''
@@ -427,6 +473,14 @@ class Lexer:
                 return self._id()
             if _.isdigit():
                 return self._num()
+
+            # --- [BUG 1 修复] ---
+            # 新增判断：如果是点，并且点后面是数字，
+            # 也交给 _num() 处理
+            if _ == '.' and self.pos + 1 < len(self.text) and self.text[self.pos + 1].isdigit():
+                return self._num()
+            # --- [修复结束] ---
+
             if _ == '"':
                 return self._str()
             if _ == "'":
