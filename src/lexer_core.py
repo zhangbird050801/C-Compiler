@@ -1,12 +1,4 @@
-"""
-C 语言词法分析器核心模块
-包含词法分析器类、符号表类和相关常量定义
-"""
 from collections import namedtuple
-
-# ==============================================================================
-# 1. 数据结构定义
-# ==============================================================================
 
 TOKEN = namedtuple('Token', ['type', 'attribute', 'line', 'is_error'])
 
@@ -14,17 +6,13 @@ def make_token(type_, attr, line, is_error=False):
     """创建一个 Token"""
     return TOKEN(type_, attr, line, is_error)
 
-
-# ==============================================================================
-# 2. 常量定义
-# ==============================================================================
-
 # 关键字映射表
 KEYWORDS = {
     'auto': 1, 'break': 2, 'case': 3, 'char': 4, 'const': 5, 'continue': 6, 'default': 7, 'do': 8,
     'double': 9, 'else': 10, 'enum': 11, 'extern': 12, 'float': 13, 'for': 14, 'goto': 15, 'if': 16,
     'int': 17, 'long': 18, 'register': 19, 'return': 20, 'short': 21, 'signed': 22, 'sizeof': 23, 'static': 24,
-    'struct': 25, 'switch': 26, 'typedef': 27, 'union': 28, 'unsigned': 29, 'void': 30, 'volatile': 31, 'while': 32
+    'struct': 25, 'switch': 26, 'typedef': 27, 'union': 28, 'unsigned': 29, 'void': 30, 'volatile': 31, 'while': 32,
+    'int36': 90
 }
 
 # 操作符映射表
@@ -42,11 +30,14 @@ DL = {
 
 # 其他 Token 类型
 ID, CONST_DECIMAL, CONST_OCTAL, CONST_HEX, CONST_FLOAT, CONST_CHAR, STRING_, PREPROCESSOR = 82, 83, 84, 85, 86, 87, 88, 89
+
+CONST_BASE36 = 91
 EOF = -1
 
 # 字符集定义
 HEX_CHAR = '0123456789abcdefABCDEF'
 OCTAL_CHAR = '01234567'
+BASE36_CHAR = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 # 错误信息映射表
 ERRORS = {
@@ -78,25 +69,20 @@ TYPES[ID], TYPES[CONST_DECIMAL], TYPES[CONST_OCTAL], TYPES[CONST_HEX], TYPES[CON
     STRING_], TYPES[PREPROCESSOR], TYPES[EOF] \
     = 'IDENTIFIER', 'CONST_DECIMAL', 'CONST_OCTAL', 'CONST_HEX', 'CONST_FLOAT', 'CONST_CHAR', 'STRING_LITERAL', 'PREPROCESSOR', 'EOF'
 
+TYPES[CONST_BASE36] = 'CONST_BASE36'
 
-# ==============================================================================
 # 3. 符号表类
-# ==============================================================================
 
 class SymbolTable:
-    """符号表，用于存储标识符信息"""
-    
     def __init__(self):
         self.symbols = {}
 
     def add(self, name):
-        """添加一个标识符到符号表"""
         if name not in self.symbols:
             self.symbols[name] = {'name': name, 'type': None}
         return self.symbols[name]
 
     def __str__(self):
-        """格式化输出符号表"""
         if not self.symbols:
             return "符号表为空"
 
@@ -117,13 +103,7 @@ class SymbolTable:
         return "\n".join(result)
 
 
-# ==============================================================================
-# 4. 词法分析器类
-# ==============================================================================
-
 class Lexer:
-    """C 语言词法分析器"""
-    
     def __init__(self, text):
         self.text = text
         self.pos = 0
@@ -437,7 +417,6 @@ class Lexer:
         return make_token(PREPROCESSOR, tmp.strip(), line=start_line)
 
     def next_token(self):
-        """获取下一个 Token"""
         while self.char is not None:
             self.skip_whitespace_and_comments()
 
@@ -475,7 +454,6 @@ class Lexer:
         return make_token(EOF, 'EOF', line=self.line)
 
     def tokenize(self):
-        """对整个文本进行词法分析，返回 Token 列表"""
         ans = []
         _ = self.next_token()
         while _.type != EOF:
