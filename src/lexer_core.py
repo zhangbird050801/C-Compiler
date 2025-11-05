@@ -157,8 +157,7 @@ class Lexer:
             if self.char is not None and (self.char.isalnum() or self.char == '_'):
                 while self.char is not None and (self.char.isalnum() or self.char == '_'):
                     tmp += self.char; self.next()
-                self.error('INVALID_IDENTIFIER', tmp, line=l)
-                err = True
+                self.error('INVALID_IDENTIFIER', tmp, line=l); err = True
             return make_token(CONST_FLOAT, tmp, line=l, err=err)
 
 
@@ -175,12 +174,10 @@ class Lexer:
                 if self.char is not None and (self.char.isalnum() or self.char == '_'):
                     while self.char is not None and (self.char.isalnum() or self.char == '_'):
                         tmp += self.char; self.next()
-                    self.error('INVALID_HEX', tmp, line=l)
-                    err = True
+                    self.error('INVALID_HEX', tmp, line=l); err = True
                 elif _ == self.pos:
                     # 0x 后面没有任何十六进制数字
-                    self.error('INVALID_HEX', tmp, line=l)
-                    err = True
+                    self.error('INVALID_HEX', tmp, line=l); err = True
                 return make_token(CONST_HEX, tmp, line=l, err=err)
             # 八进制
             _ = False
@@ -191,11 +188,9 @@ class Lexer:
             if self.char is not None and (self.char.isalnum() or self.char == '_'):
                 while self.char is not None and (self.char.isalnum() or self.char == '_'):
                     tmp += self.char; self.next()
-                self.error('INVALID_OCTAL_DIGIT', tmp, line=l)
-                err = True
+                self.error('INVALID_OCTAL_DIGIT', tmp, line=l); err = True
             elif _:
-                self.error('INVALID_OCTAL_DIGIT', tmp, line=l)
-                err = True
+                self.error('INVALID_OCTAL_DIGIT', tmp, line=l); err = True
             return make_token(CONST_OCTAL, tmp, line=l, err=err)
 
         # 十进制
@@ -210,8 +205,7 @@ class Lexer:
             if self.char is not None and (self.char.isalnum() or self.char == '_'):
                 while self.char is not None and (self.char.isalnum() or self.char == '_'):
                     tmp += self.char; self.next()
-                self.error('INVALID_IDENTIFIER', tmp, line=l)
-                err = True
+                self.error('INVALID_IDENTIFIER', tmp, line=l); err = True
             return make_token(CONST_FLOAT, tmp, line=l, err=err)
 
         return make_token(CONST_DECIMAL, tmp, line=l, err=err)
@@ -227,21 +221,18 @@ class Lexer:
             if self.char == '\\':
                 tmp += self.char; self.next()
                 if self.char is None:
-                    self.error('UNTERMINATED_STRING', tmp, line=l)
-                    err = True
+                    self.error('UNTERMINATED_STRING', tmp, line=l); err = True
                     break
                 tmp += self.char; self.next()
             else:
                 tmp += self.char; self.next()
                 
         if self.char == '\n':
-            self.error('STRING_NEWLINE', tmp, line=l)
-            err = True
+            self.error('STRING_NEWLINE', tmp, line=l); err = True
         elif self.char == '"':
             self.next()
         else:
-            self.error('UNTERMINATED_STRING', tmp, line=l)
-            err = True
+            self.error('UNTERMINATED_STRING', tmp, line=l); err = True
         return make_token(STRING_, tmp, line=l, err=err)
 
     def _char(self):
@@ -277,13 +268,11 @@ class Lexer:
             while self.char is not None and self.char != "'" and self.char != '\n':
                 extra_chars += self.char
                 self.next()
-            self.error('MULTI_CHAR', tmp + extra_chars, line=l)
-            err = True
+            self.error('MULTI_CHAR', tmp + extra_chars, line=l); err = True
             tmp = tmp + extra_chars
 
         if self.char != "'":
-            self.error('UNTERMINATED_CHAR', tmp, line=l)
-            err = True
+            self.error('UNTERMINATED_CHAR', tmp, line=l); err = True
         else:
             self.next()
 
