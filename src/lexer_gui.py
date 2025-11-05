@@ -124,7 +124,7 @@ class LexerApp(tk.Tk):
             printed_error_messages = set()
 
             for token in tokens:
-                if token.is_error:
+                if token.error:
                     # 内联错误显示
                     found_error = False
                     for error in lexer.errors:
