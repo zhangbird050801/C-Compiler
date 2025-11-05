@@ -1,45 +1,49 @@
-import sys
 from collections import namedtuple
-import tkinter as tk
-from tkinter import filedialog, scrolledtext, messagebox, ttk
 
-# ==============================================================================
-# 1. 核心词法分析逻辑 (已重构)
-# ==============================================================================
-
-# --- [修改点 1]：Token 增加了 'line' 属性 ---
 TOKEN = namedtuple('Token', ['type', 'attribute', 'line', 'is_error'])
 
-
-# --- [修改点 2]：make_token 增加了 'line' 参数 ---
 def make_token(type_, attr, line, is_error=False):
+    """创建一个 Token"""
     return TOKEN(type_, attr, line, is_error)
 
-
-# --- 常量定义 (不变) ---
+# 关键字映射表
 KEYWORDS = {
     'auto': 1, 'break': 2, 'case': 3, 'char': 4, 'const': 5, 'continue': 6, 'default': 7, 'do': 8,
     'double': 9, 'else': 10, 'enum': 11, 'extern': 12, 'float': 13, 'for': 14, 'goto': 15, 'if': 16,
     'int': 17, 'long': 18, 'register': 19, 'return': 20, 'short': 21, 'signed': 22, 'sizeof': 23, 'static': 24,
-    'struct': 25, 'switch': 26, 'typedef': 27, 'union': 28, 'unsigned': 29, 'void': 30, 'volatile': 31, 'while': 32
+    'struct': 25, 'switch': 26, 'typedef': 27, 'union': 28, 'unsigned': 29, 'void': 30, 'volatile': 31, 'while': 32,
+    'int36': 90
 }
+
+# 操作符映射表
 OP = {
     '=': 33, '+=': 34, '-=': 35, '*=': 36, '/=': 37, '%=': 38, '&=': 39, '|=': 40, '^=': 41, '<<=': 42, '>>=': 43,
     '++': 44, '--': 45, '+': 46, '-': 47, '*': 48, '/': 49, '%': 50, '~': 51, '&': 52, '|': 53, '^': 54, '<<': 55,
     '>>': 56, '!': 57, '&&': 58, '||': 59, '==': 60, '!=': 61, '<': 62, '>': 63, '<=': 64, '>=': 65, '->': 66,
     '.': 67, '?': 68, ':': 69
 }
+
+# 界符映射表
 DL = {
     '(': 70, ')': 71, '[': 72, ']': 73, '{': 74, '}': 75, ',': 76, ';': 77,
 }
+
+# 其他 Token 类型
 ID, CONST_DECIMAL, CONST_OCTAL, CONST_HEX, CONST_FLOAT, CONST_CHAR, STRING_, PREPROCESSOR = 82, 83, 84, 85, 86, 87, 88, 89
+
+CONST_BASE36 = 91
 EOF = -1
+
+# 字符集定义
 HEX_CHAR = '0123456789abcdefABCDEF'
 OCTAL_CHAR = '01234567'
+BASE36_CHAR = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
+# 错误信息映射表
 ERRORS = {
     'INVALID_HEX': "无效的十六进制数",
     'INVALID_OCTAL_DIGIT': "无效的八进制数",
+    'INVALID_BASE36': "无效的36进制数",
     'UNEXPECTED_CHAR': "无效的字符常量",
     'UNTERMINATED_STRING': "未结束的字符串常量",
     'INVALID_FLOAT_EXPONENT': "无效的浮点数",
@@ -49,11 +53,12 @@ ERRORS = {
     'MULTI_CHAR': "字符常量包含多个字符",
     'INVALID_ESCAPE': "无效的转义序列",
     'STRING_NEWLINE': "字符串中包含未转义的换行符",
-    'UNTERMINATED_COMMENT': "未闭合的块注释",  # <-- [修改点 3]：新错误类型
+    'UNTERMINATED_COMMENT': "未闭合的块注释",
     'IDENTIFIER_TOO_LONG': "标识符长度超过限制",
     'UNKNOWN_CHAR': "未知字符",
 }
 
+# Token 类型名称映射表
 TYPES = {}
 for _ in KEYWORDS.values():
     TYPES[_] = 'KEYWORD'
@@ -65,15 +70,17 @@ TYPES[ID], TYPES[CONST_DECIMAL], TYPES[CONST_OCTAL], TYPES[CONST_HEX], TYPES[CON
     STRING_], TYPES[PREPROCESSOR], TYPES[EOF] \
     = 'IDENTIFIER', 'CONST_DECIMAL', 'CONST_OCTAL', 'CONST_HEX', 'CONST_FLOAT', 'CONST_CHAR', 'STRING_LITERAL', 'PREPROCESSOR', 'EOF'
 
+TYPES[CONST_BASE36] = 'CONST_BASE36'
 
-# --- 符号表类 (不变) ---
+# 3. 符号表类
+
 class SymbolTable:
     def __init__(self):
         self.symbols = {}
 
     def add(self, name):
         if name not in self.symbols:
-            self.symbols[name] = {'name': name, 'type': None}
+            self.symbols[name] = {'name': name}
         return self.symbols[name]
 
     def __str__(self):
@@ -81,14 +88,13 @@ class SymbolTable:
             return "符号表为空"
 
         result = ["\n" + "=" * 50]
-        result.append("符号表 (Symbol Table)")
+        result.append("标识符")
         result.append("=" * 50)
-        result.append(f"{'序号':<6} {'标识符':<20} {'类型':<15}")
+        result.append(f"{'序号':<6} {'标识符':<20}")
         result.append("-" * 50)
 
         for idx, (name, info) in enumerate(self.symbols.items(), 1):
-            type_str = info['type'] if info['type'] else '未定义'
-            result.append(f"{idx:<6} {name:<20} {type_str:<15}")
+            result.append(f"{idx:<6} {name:<20}")
 
         result.append("=" * 50)
         result.append(f"总计: {len(self.symbols)} 个标识符")
@@ -97,11 +103,6 @@ class SymbolTable:
         return "\n".join(result)
 
 
-# --- [修改点 4]：process 函数被彻底移除 ---
-# (已删除)
-
-
-# --- 词法分析器类 (已重构) ---
 class Lexer:
     def __init__(self, text):
         self.text = text
@@ -112,13 +113,18 @@ class Lexer:
         self.char = self.text[self.pos] if self.text else None
         self.errors = []
 
+        # 合并操作符和界符，按长度降序排列（优先匹配长符号）
         t_ = {**OP, **DL}
         self.symbols = sorted(t_.items(), key=lambda x: len(x[0]), reverse=True)
 
-    def error(self, error, content='', line=None, *args):
-        # 错误现在可以指定行号
-        report_line = line if line is not None else self.line
+        # 添加状态跟踪变量
+        self.last_token = None
+        self.expected_number_base = 10  # 默认十进制
+        self.expect_base36_number = False  # 是否期望36进制常量
 
+    def error(self, error, content='', line=None, *args):
+        """记录错误信息"""
+        report_line = line if line is not None else self.line
         m = ERRORS.get(error, "未知错误").format(*args)
         if content:
             error_msg = f'错误: {m}, 内容: "{content}" at line {report_line}'
@@ -128,6 +134,7 @@ class Lexer:
         return error_msg
 
     def next(self):
+        """移动到下一个字符"""
         if self.char == '\n':
             self.line += 1
             self.col = 0
@@ -135,23 +142,22 @@ class Lexer:
         self.col += 1
         self.char = self.text[self.pos] if self.pos < len(self.text) else None
 
-    # --- [修改点 5]：全新的函数，用于处理空白和注释 ---
     def skip_whitespace_and_comments(self):
-        """ 跳过所有空白字符、单行注释和多行注释 """
+        """跳过所有空白字符、单行注释和多行注释"""
         while self.char is not None:
             if self.char.isspace():
                 self.next()
                 continue
 
-            # 处理 // 注释
+            # 处理 // 单行注释
             if self.char == '/' and self.pos + 1 < len(self.text) and self.text[self.pos + 1] == '/':
                 while self.char is not None and self.char != '\n':
                     self.next()
-                continue  # 继续循环，可能会有更多空白或注释
+                continue
 
-            # 处理 /* */ 注释
+            # 处理 /* */ 多行注释
             if self.char == '/' and self.pos + 1 < len(self.text) and self.text[self.pos + 1] == '*':
-                start_line = self.line  # 记录起始行，用于报错
+                start_line = self.line
                 self.next()  # skip /
                 self.next()  # skip *
 
@@ -160,66 +166,108 @@ class Lexer:
                     self.next()
 
                 if self.char is None:
-                    # 未闭合的注释，使用 Lexer 的错误处理机制！
                     self.error('UNTERMINATED_COMMENT', '', line=start_line)
-                    break  # 结束循环
+                    break
                 else:
                     self.next()  # skip *
                     self.next()  # skip /
-                continue  # 继续循环
+                continue
 
-            # 如果既不是空白也不是注释，则停止
+            # 既不是空白也不是注释，停止
             break
 
-    # KEYWORDS or ID
     def _id(self):
+        """识别关键字或标识符"""
         start_line = self.line
         if not (self.char and (self.char.isalpha() or self.char == '_')):
             self.error('INVALID_IDENTIFIER', '', line=start_line)
         tmp = ''
         while self.char is not None and (self.char.isalnum() or self.char == '_'):
-            tmp += self.char;
+            tmp += self.char
             self.next()
+
+        # 检查是否为关键字
         type_ = KEYWORDS.get(tmp, ID)
+
+        # 如果不是关键字，且明确期望36进制常量，检查是否为36进制常量
+        if (type_ == ID and hasattr(self, 'expect_base36_number') and
+            self.expect_base36_number and self._is_valid_base36(tmp)):
+            return make_token(CONST_BASE36, tmp, line=start_line)
+
+        # 普通标识符处理
         if type_ == ID:
             self.table.add(tmp)
-        # --- [修改点 6]：所有 make_token 调用都增加了 line=start_line ---
         return make_token(type_, tmp, line=start_line)
 
+    def _is_valid_base36(self, s):
+        """检查字符串是否是有效的36进制数"""
+        if not s:  # 空字符串
+            return False
+        # 检查所有字符是否都在BASE36_CHAR中
+        for char in s:
+            if char not in BASE36_CHAR:
+                return False
+        return True
+
     def _float(self, tmp):
-        # (这个辅助函数不变)
+        """处理浮点数的小数部分和指数部分"""
         flag = False
         error_flag = False
+        
+        # 处理小数点
         if self.char == '.':
             flag = True
-            tmp += self.char;
+            tmp += self.char
             self.next()
             while self.char is not None and self.char.isdigit():
-                tmp += self.char;
+                tmp += self.char
                 self.next()
 
+        # 处理指数部分
         if self.char in 'eE':
             flag = True
-            tmp += self.char;
+            tmp += self.char
             self.next()
             if self.char in '+-':
-                tmp += self.char;
+                tmp += self.char
                 self.next()
             if not (self.char and self.char.isdigit()):
                 self.error('INVALID_FLOAT_EXPONENT', tmp)
                 error_flag = True
                 return tmp, flag, error_flag
             while self.char is not None and self.char.isdigit():
-                tmp += self.char;
+                tmp += self.char
                 self.next()
 
         return tmp, flag, error_flag
 
     def _num(self):
+        """识别数字常量（十进制、八进制、十六进制、浮点数、36进制）"""
         tmp = ''
         is_error = False
-        start_line = self.line  # 记录Token的起始行号
+        start_line = self.line
 
+        # 检查是否应该解析为36进制
+        if (hasattr(self, 'expected_number_base') and self.expected_number_base == 36 and
+            self.char is not None and self.char in BASE36_CHAR):
+            tmp = ''
+            while self.char is not None and self.char in BASE36_CHAR:
+                tmp += self.char
+                self.next()
+
+            # 检查是否有非法字符跟随
+            if self.char is not None and (self.char.isalnum() or self.char == '_'):
+                # 消耗掉非法字符
+                invalid_chars = ''
+                while self.char is not None and (self.char.isalnum() or self.char == '_'):
+                    invalid_chars += self.char
+                    self.next()
+                self.error('INVALID_BASE36', tmp + invalid_chars, line=start_line)
+                is_error = True
+
+            return make_token(CONST_BASE36, tmp, line=start_line, is_error=is_error)
+
+        # 处理以 . 开头的浮点数
         if self.char == '.':
             tmp += self.char
             self.next()
@@ -227,68 +275,75 @@ class Lexer:
                 tmp += self.char
                 self.next()
             if self.char in 'eE':
-                tmp += self.char;
+                tmp += self.char
                 self.next()
                 if self.char in '+-':
-                    tmp += self.char;
+                    tmp += self.char
                     self.next()
                 if not (self.char and self.char.isdigit()):
                     self.error('INVALID_FLOAT_EXPONENT', tmp, line=start_line)
                     is_error = True
                 while self.char is not None and self.char.isdigit():
-                    tmp += self.char;
+                    tmp += self.char
                     self.next()
             if self.char is not None and (self.char.isalpha() or self.char == '_'):
                 while self.char is not None and (self.char.isalnum() or self.char == '_'):
-                    tmp += self.char;
+                    tmp += self.char
                     self.next()
                 self.error('INVALID_IDENTIFIER', tmp, line=start_line)
                 is_error = True
             return make_token(CONST_FLOAT, tmp, line=start_line, is_error=is_error)
 
+        # 处理以 0 开头的数字（可能是八进制或十六进制）
         is_octal_candidate = False
         if self.char == '0':
             is_octal_candidate = True
             tmp += self.char
             self.next()
+            
+            # 十六进制
             if self.char in 'xX':
-                tmp += self.char;
+                tmp += self.char
                 self.next()
                 _ = self.pos
                 while self.char is not None and self.char in HEX_CHAR:
-                    tmp += self.char;
+                    tmp += self.char
                     self.next()
                 if _ == self.pos or (self.char is not None and (self.char.isalnum() or self.char == '_')):
                     while self.char is not None and (self.char.isalnum() or self.char == '_'):
-                        tmp += self.char;
+                        tmp += self.char
                         self.next()
                     self.error('INVALID_HEX', tmp, line=start_line)
                     is_error = True
                 return make_token(CONST_HEX, tmp, line=start_line, is_error=is_error)
 
+        # 继续读取数字
         while self.char is not None and self.char.isdigit():
             tmp += self.char
             self.next()
 
+        # 检查是否是浮点数
         if self.char == '.' or self.char in 'eE':
             is_octal_candidate = False
             tmp, flag, is_error_float = self._float(tmp)
             is_error = is_error or is_error_float
             if self.char is not None and (self.char.isalpha() or self.char == '_'):
                 while self.char is not None and (self.char.isalnum() or self.char == '_'):
-                    tmp += self.char;
+                    tmp += self.char
                     self.next()
                 self.error('INVALID_IDENTIFIER', tmp, line=start_line)
                 is_error = True
             return make_token(CONST_FLOAT, tmp, line=start_line, is_error=is_error)
 
+        # 检查是否有非法字符跟随
         if self.char is not None and (self.char.isalpha() or self.char == '_'):
             while self.char is not None and (self.char.isalnum() or self.char == '_'):
-                tmp += self.char;
+                tmp += self.char
                 self.next()
             self.error('INVALID_IDENTIFIER', tmp, line=start_line)
             is_error = True
 
+        # 检查八进制数的合法性
         has_invalid_octal_digit = False
         if is_octal_candidate:
             for char in tmp[1:]:
@@ -307,23 +362,26 @@ class Lexer:
         return make_token(CONST_DECIMAL, tmp, line=start_line, is_error=is_error)
 
     def _str(self):
+        """识别字符串常量"""
         tmp = ''
         is_error = False
         start_line = self.line
-        self.next()
+        self.next()  # skip opening "
+        
         while self.char is not None and self.char != '"' and self.char != '\n':
             if self.char == '\\':
-                tmp += self.char;
+                tmp += self.char
                 self.next()
                 if self.char is None:
                     self.error('UNTERMINATED_STRING', tmp, line=start_line)
                     is_error = True
                     break
-                tmp += self.char;
+                tmp += self.char
                 self.next()
             else:
-                tmp += self.char;
+                tmp += self.char
                 self.next()
+                
         if self.char == '\n':
             self.error('STRING_NEWLINE', tmp, line=start_line)
             is_error = True
@@ -335,11 +393,13 @@ class Lexer:
         return make_token(STRING_, tmp, line=start_line, is_error=is_error)
 
     def _char(self):
+        """识别字符常量"""
         tmp = ''
         is_error = False
         start_line = self.line
-        self.next()
+        self.next()  # skip opening '
 
+        # 空字符常量
         if self.char == "'":
             self.error('EMPTY_CHAR', '', line=start_line)
             self.next()
@@ -349,32 +409,28 @@ class Lexer:
             self.error('UNTERMINATED_CHAR', tmp, line=start_line)
             return make_token(CONST_CHAR, tmp, line=start_line, is_error=True)
 
+        # 处理转义字符
         if self.char == '\\':
-            tmp += self.char;
+            tmp += self.char
             self.next()
             if self.char is None:
                 self.error('UNTERMINATED_CHAR', tmp, line=start_line)
                 return make_token(CONST_CHAR, tmp, line=start_line, is_error=True)
-            tmp += self.char;
+            tmp += self.char
             self.next()
         else:
-            tmp += self.char;
+            tmp += self.char
             self.next()
 
-        # 检查是否是多字符常量（如 'abc'）
+        # 检查多字符常量
         if self.char != "'" and self.char is not None and self.char != '\n':
             extra_chars = ''
             while self.char is not None and self.char != "'" and self.char != '\n':
                 extra_chars += self.char
                 self.next()
-
-            # --- [BUG 修复在这里] ---
-            # 1. 报告完整的错误
             self.error('MULTI_CHAR', tmp + extra_chars, line=start_line)
             is_error = True
-            # 2. 更新 tmp，让 Token 也包含完整内容
             tmp = tmp + extra_chars
-            # --- [修复结束] ---
 
         if self.char != "'":
             self.error('UNTERMINATED_CHAR', tmp, line=start_line)
@@ -385,15 +441,16 @@ class Lexer:
         return make_token(CONST_CHAR, tmp, line=start_line, is_error=is_error)
 
     def _preprocessor(self):
+        """识别预处理指令"""
         start_line = self.line
         tmp = ''
         while self.char is not None:
-            # (Bug 3: 续行符 \n 暂未修复，保持原样)
+            # 处理续行符
             if self.char == '\\':
                 if self.pos + 1 < len(self.text) and self.text[self.pos + 1] == '\n':
                     self.next()  # skip \
                     self.next()  # skip \n
-                    tmp += ' '  # 续行符替换为空格
+                    tmp += ' '
                     continue
 
             if self.char == '\n':
@@ -405,39 +462,81 @@ class Lexer:
 
     def next_token(self):
         while self.char is not None:
-            # --- [修改点 7]：调用新函数来跳过空白和注释 ---
             self.skip_whitespace_and_comments()
 
             _ = self.char
             if _ is None:
                 continue
 
-            start_line = self.line  # 记录所有Token的起始行号
+            start_line = self.line
 
+            token = None
             if _ == '#':
-                return self._preprocessor()
-            if _.isalpha() or _ == '_':
-                return self._id()
-            if _.isdigit():
-                return self._num()
-            if _ == '.' and self.pos + 1 < len(self.text) and self.text[self.pos + 1].isdigit():
-                return self._num()
-            if _ == '"':
-                return self._str()
-            if _ == "'":
-                return self._char()
+                token = self._preprocessor()
+            elif _.isalpha() or _ == '_':
+                token = self._id()
+            elif _.isdigit():
+                token = self._num()
+            elif _ == '.' and self.pos + 1 < len(self.text) and self.text[self.pos + 1].isdigit():
+                token = self._num()
+            elif _ == '"':
+                token = self._str()
+            elif _ == "'":
+                token = self._char()
+            else:
+                # 匹配操作符和界符
+                for s, t in self.symbols:
+                    if self.text.startswith(s, self.pos):
+                        for _ in range(len(s)):
+                            self.next()
+                        token = make_token(t, s, line=start_line)
+                        break
+                else:
+                    # 未知字符
+                    unknown_char = self.char
+                    self.error('UNKNOWN_CHAR', unknown_char, line=start_line)
+                    self.next()
+                    continue
 
-            for s, t in self.symbols:
-                if self.text.startswith(s, self.pos):
-                    for _ in range(len(s)): self.next()
-                    return make_token(t, s, line=start_line)
+            # 更新状态和last_token
+            if token:
+                self._update_lexer_state(token)
+                self.last_token = token
+                return token
 
-            unknown_char = self.char
-            self.error('UNKNOWN_CHAR', unknown_char, line=start_line)
-            self.next()
-
-        # 循环结束，返回 EOF
         return make_token(EOF, 'EOF', line=self.line)
+
+    def _update_lexer_state(self, token):
+        """根据当前token更新词法分析器状态"""
+        # 遇到int36关键字，设置期望的数字进制为36
+        if token.type == KEYWORDS.get('int36'):
+            self.expected_number_base = 36
+            self.expect_base36_number = False
+        # 遇到其他基本类型关键字，重置为十进制
+        elif token.type in [KEYWORDS.get(k) for k in ['int', 'char', 'float', 'double', 'long', 'short', 'signed', 'unsigned']]:
+            self.expected_number_base = 10
+            self.expect_base36_number = False
+        # 遇到分号，重置为十进制（声明语句结束）
+        elif token.type == DL.get(';'):
+            self.expected_number_base = 10
+            self.expect_base36_number = False
+        # 遇到等号，如果当前是36进制上下文，设置期望36进制常量
+        elif token.type == OP.get('='):
+            if self.expected_number_base == 36:
+                self.expect_base36_number = True
+            else:
+                self.expect_base36_number = False
+        # 遇到逗号，在36进制上下文中继续期望36进制常量（用于声明多个变量时的初始化）
+        elif token.type == DL.get(','):
+            if self.expected_number_base == 36:
+                self.expect_base36_number = False  # 逗号后面是变量名，不是常量
+        # 处理完一个token后，如果是数字常量，重置期望标志
+        elif token.type in [CONST_BASE36, CONST_DECIMAL, CONST_OCTAL, CONST_HEX, CONST_FLOAT]:
+            self.expect_base36_number = False
+        # 其他情况保持当前进制但不期望36进制常量
+        elif token.type == ID:
+            # 标识符（变量名）后不期望36进制常量
+            self.expect_base36_number = False
 
     def tokenize(self):
         ans = []
@@ -447,179 +546,3 @@ class Lexer:
             _ = self.next_token()
         ans.append(_)
         return ans
-
-
-# ==============================================================================
-# 2. GUI 应用层 (已更新)
-# ==============================================================================
-
-class LexerApp(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.title("C 语言词法分析器 (GUI版 v2)")
-        self.geometry("1000x700")
-
-        style = ttk.Style(self)
-        style.theme_use('clam')
-
-        self.create_widgets()
-
-    def create_widgets(self):
-        # (GUI 布局不变)
-        top_frame = ttk.Frame(self, padding="10")
-        top_frame.pack(fill='x')
-        self.load_button = ttk.Button(top_frame, text="1. 加载 C 文件", command=self.load_file)
-        self.load_button.pack(side='left', padx=5)
-        self.run_button = ttk.Button(top_frame, text="2. 运行词法分析", command=self.run_analysis)
-        self.run_button.pack(side='left', padx=5)
-        self.clear_button = ttk.Button(top_frame, text="清除全部", command=self.clear_all)
-        self.clear_button.pack(side='right', padx=5)
-        main_frame = ttk.Frame(self, padding="0 10 10 10")
-        main_frame.pack(fill='both', expand=True)
-        paned_window = ttk.PanedWindow(main_frame, orient='horizontal')
-        paned_window.pack(fill='both', expand=True)
-        input_frame = ttk.Frame(paned_window, padding=5)
-        input_frame.columnconfigure(0, weight=1)
-        input_frame.rowconfigure(1, weight=1)
-        ttk.Label(input_frame, text="C 源代码输入:").grid(row=0, column=0, sticky='w', pady=5)
-        self.input_text = scrolledtext.ScrolledText(input_frame, wrap=tk.WORD, height=10, width=60)
-        self.input_text.grid(row=1, column=0, sticky='nsew')
-        paned_window.add(input_frame, weight=1)
-        output_frame = ttk.Frame(paned_window, padding=5)
-        output_frame.columnconfigure(0, weight=1)
-        output_frame.rowconfigure(1, weight=1)
-        ttk.Label(output_frame, text="分析结果:").grid(row=0, column=0, sticky='w', pady=5)
-        self.output_text = scrolledtext.ScrolledText(output_frame, wrap=tk.WORD, height=10, width=60, state='disabled')
-        self.output_text.grid(row=1, column=0, sticky='nsew')
-        paned_window.add(output_frame, weight=1)
-
-    def load_file(self):
-        # (不变)
-        filepath = filedialog.askopenfilename(
-            title="选择一个 C 源文件",
-            filetypes=[("C Files", "*.c"), ("Header Files", "*.h"), ("Text Files", "*.txt"), ("All Files", "*.*")]
-        )
-        if not filepath:
-            return
-        try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                code = f.read()
-            self.input_text.delete("1.0", tk.END)
-            self.input_text.insert("1.0", code)
-            self.output_text.config(state='normal')
-            self.output_text.delete("1.0", tk.END)
-            self.output_text.insert("1.0", f"成功加载文件: {filepath}\n")
-            self.output_text.config(state='disabled')
-        except Exception as e:
-            messagebox.showerror("加载失败", f"无法读取文件: {e}")
-
-    # --- [修改点 8]：run_analysis 已重构 ---
-    def run_analysis(self):
-        code = self.input_text.get("1.0", tk.END)
-        if not code.strip():
-            messagebox.showwarning("输入为空", "请输入或加载 C 代码后再试。")
-            return
-
-        self.output_text.config(state='normal')
-        self.output_text.delete("1.0", tk.END)
-
-        output_buffer = []
-
-        try:
-            # 1. 运行词法分析
-            lexer = Lexer(code)
-            tokens = lexer.tokenize()
-
-            output_buffer.append("=" * 50 + "\n")
-            output_buffer.append("词法单元流 (Token Stream)\n")
-            output_buffer.append("=" * 50 + "\n")
-
-            # 2. [最终融合方案]
-            # 打印带行号的Token流，并内联显示错误
-
-            printed_error_messages = set()
-
-            for token in tokens:
-                if token.is_error:
-                    # [内联错误显示]
-                    # 尝试使用 token.line 和 token.attribute 进行精确匹配
-                    found_error = False
-                    for error in lexer.errors:
-                        if error in printed_error_messages:
-                            continue
-
-                        # 关键: 使用行号和内容双重匹配
-                        if f"at line {token.line}" in error and token.attribute in error:
-                            output_buffer.append(f">>> {error}\n")
-                            printed_error_messages.add(error)
-                            found_error = True
-                            break
-
-                    # 兜底：处理空字符串 '' 错误
-                    if not found_error and token.attribute == '':
-                        for error in lexer.errors:
-                            if error in printed_error_messages:
-                                continue
-                            if f"at line {token.line}" in error and "空字符" in error:
-                                output_buffer.append(f">>> {error}\n")
-                                printed_error_messages.add(error)
-                                break
-                    continue  # 跳过打印这个错误的Token
-
-                # --- [保留行号显示] ---
-                # (处理正常Token的逻辑)
-
-                _ = TYPES.get(token.type, 'UNKNOWN')
-
-                if token.type == STRING_:
-                    attr_ = f'"{token.attribute}"'
-                elif token.type == CONST_CHAR:
-                    attr_ = f"'{token.attribute}'"
-                else:
-                    attr_ = token.attribute
-
-                # 构建带行号的输出
-                line_prefix = f"[L{token.line:<3}]"  # L表示Line, <3 表示左对齐占3位
-                token_body = f"( {_:<16} <{token.type}>: {attr_} )"
-
-                output_buffer.append(f"    {line_prefix} {token_body}\n")
-
-            # 6. 打印符号表 (不变)
-            output_buffer.append(str(lexer.table) + "\n")
-
-            # 7. 打印错误汇总 (不变)
-            if lexer.errors:
-                output_buffer.append("\n" + "=" * 50 + "\n")
-                output_buffer.append("词法分析过程中发现以下错误:\n")
-                output_buffer.append("=" * 50 + "\n")
-                for error in lexer.errors:
-                    output_buffer.append(f">>> {error}\n")
-            else:
-                output_buffer.append("\n" + "=" * 50 + "\n")
-                output_buffer.append("词法分析完成，未发现错误。\n")
-                output_buffer.append("=" * 50 + "\n")
-
-        except Exception as e:
-            output_buffer.append("\n" + "!" * 50 + "\n")
-            output_buffer.append(f"程序执行时发生致命错误: {e}\n")
-            output_buffer.append("!" * 50 + "\n")
-
-        # 8. 写入GUI
-        self.output_text.insert("1.0", "".join(output_buffer))
-        self.output_text.config(state='disabled')
-
-    def clear_all(self):
-        # (不变)
-        self.input_text.delete("1.0", tk.END)
-        self.output_text.config(state='normal')
-        self.output_text.delete("1.0", tk.END)
-        self.output_text.config(state='disabled')
-
-
-# ==============================================================================
-# 3. 启动器 (不变)
-# ==============================================================================
-
-if __name__ == '__main__':
-    app = LexerApp()
-    app.mainloop()

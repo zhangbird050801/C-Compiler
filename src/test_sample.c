@@ -1,27 +1,9 @@
-// 测试词法分析器的示例 C 代码
-#include <stdio.h>
-
-int main() {
-    // 变量声明
-    int x = 10;
-    float y = 3.14;
-    char c = 'A';
-    
-    /* 多行注释
-       测试注释功能 */
-    
-    // 字符串测试
-    printf("Hello, World!\n");
-    
-    // 算术运算
-    int result = x + 5;
-    
-    // 条件语句
-    if (x > 0) {
-        printf("Positive\n");
-    } else {
-        printf("Non-positive\n");
+void main(){
+    int a=19, sum=0;
+    int36 b=5Au, c=aT4;
+    for(int i=0;i<100;i++){
+        if(i<=50) sum=sum+b+f9a;
+        else sum=sum+c;
     }
-    
-    return 0;
+    printf("%d",sum);
 }
