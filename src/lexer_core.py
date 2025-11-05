@@ -1,5 +1,5 @@
 from collections import namedtuple
-from constants import (KEYWORDS, OP, DL, ID, CONST_DECIMAL, CONST_OCTAL, CONST_HEX, CONST_FLOAT, CONST_CHAR, STRING_, PREPROCESSOR, EOF, HEX_CHAR, OCTAL_CHAR, ERRORS, TYPES)
+from constants import (KEYWORDS, OP, DL, ID, CONST_DECIMAL, CONST_OCTAL, CONST_HEX, CONST_FLOAT, CONST_CHAR, STRING_, PREPROCESSOR, CONST_INT36, EOF, HEX_CHAR, OCTAL_CHAR, BASE36_CHAR, ERRORS, TYPES)
 
 TOKEN = namedtuple('Token', ['type', 'attribute', 'line', 'error'])
 
@@ -19,11 +19,12 @@ class SymbolTable:
         if not self.symbols:
             return "符号表为空"
 
-        result = [f"{'序号':<6} {'标识符':<20}", "-" * 26]
+        result = ["\n" + "=" * 50, "标识符表", "=" * 50, f"{'序号':<8} {'标识符':<20}", "-" * 50]
 
         for idx, (name, info) in enumerate(self.symbols.items(), 1):
-            result.append(f"{idx:<6} {name:<20}")
+            result.append(f"{idx:<8} {name:<20}")
 
+        result.append("=" * 50)
         return "\n".join(result)
 
 
@@ -105,17 +106,29 @@ class Lexer:
                 continue
             break
 
-    def _id(self): # 识别关键词或标识符
+    def _id(self): # 识别关键词、标识符或36进制数
         l = self.line
         if not (self.char and (self.char.isalpha() or self.char == '_')): # 不以字母或下划线开头
             self.error('INVALID_IDENTIFIER', '', line=l)
         _ = ''
         while self.char is not None and (self.char.isalnum() or self.char == '_'):
             _ += self.char; self.next()
-        type_ = KEYWORDS.get(_, ID) # 看是关键词还是标识符
-        if type_ == ID: # 添加到标识符表
-            self.table.add(_)
-        return make_token(type_, _, line=l)
+        
+        # 是否是关键字
+        type_ = KEYWORDS.get(_, None)
+        if type_ is not None:
+            return make_token(type_, _, line=l)
+
+        # 检查是否是36进制数：包含数字且不含下划线且全在BASE36范围内
+        f_1 = any(c.isdigit() for c in _)
+        f_2 = '_' in _
+        f_3 = all(c in BASE36_CHAR for c in _)
+
+        if f_1 and not f_2 and f_3:
+            return make_token(CONST_INT36, _, line=l)
+        # 否则是标识符
+        self.table.add(_)
+        return make_token(ID, _, line=l)
 
     def _float(self, tmp): # 处理浮点数的小数部分和指数部分
         flag = False
@@ -203,12 +216,14 @@ class Lexer:
                 self.error('INVALID_IDENTIFIER', tmp, line=l); err = True
             return make_token(CONST_FLOAT, tmp, line=l, err=err)
 
-        # 检查十进制数后是否跟着字母或下划线（无效标识符）
+        # 检查十进制数后是否跟着字母或下划线
         if self.char is not None and (self.char.isalpha() or self.char == '_'):
             while self.char is not None and (self.char.isalnum() or self.char == '_'):
                 tmp += self.char; self.next()
-            self.error('INVALID_IDENTIFIER', tmp, line=l)
-            err = True
+            # 检查是否包含下划线或非36进制字符
+            if '_' in tmp or not all(c in BASE36_CHAR for c in tmp):
+                self.error('INVALID_INT36', tmp, line=l); err = True
+            return make_token(CONST_INT36, tmp, line=l, err=err)
 
         return make_token(CONST_DECIMAL, tmp, line=l, err=err)
 

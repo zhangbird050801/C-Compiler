@@ -21,7 +21,6 @@ int main() {
     // float a, b;
     double c = 123.0007;
     int f = 0xF5;
-    int 0as;
     int q = 077;
     int test2 = 0xfz;
     int test1 = 099;

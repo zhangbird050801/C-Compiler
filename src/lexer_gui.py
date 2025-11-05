@@ -3,7 +3,6 @@ C 语言词法分析器 GUI 界面
 """
 import tkinter as tk
 from tkinter import filedialog, scrolledtext, messagebox, ttk, font
-from line_number_text import LineNumberText
 from lexer_core import (
     Lexer, TYPES, STRING_, CONST_CHAR, EOF
 )
@@ -15,12 +14,12 @@ class LexerApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("C 语言词法分析器 (GUI版 v3)")
-        self.geometry("1200x700")
+        self.geometry("1400x700")
 
         # 设置字体
         self.default_font = font.nametofont("TkDefaultFont")
-        self.text_font = font.Font(family="Consolas", size=17)  # 修改这里的size值来调整字体大小
-        self.button_font = font.Font(family="Arial", size=17)
+        self.text_font = font.Font(family="Consolas", size=14)  # 修改这里的size值来调整字体大小
+        self.button_font = font.Font(family="Consolas", size=14)
 
         style = ttk.Style(self)
         style.theme_use('clam')
@@ -60,8 +59,8 @@ class LexerApp(tk.Tk):
         
         ttk.Label(input_frame, text="C 源代码输入:").grid(row=0, column=0, sticky='w', pady=5)
         
-        # 使用带行号的文本编辑器
-        self.input_text = LineNumberText(input_frame, wrap=tk.WORD, height=10, width=60, font=self.text_font)
+        # 使用标准文本编辑器
+        self.input_text = scrolledtext.ScrolledText(input_frame, wrap=tk.WORD, height=10, width=60, font=self.text_font)
         self.input_text.grid(row=1, column=0, sticky='nsew')
         
         paned_window.add(input_frame, weight=1)
@@ -126,7 +125,7 @@ class LexerApp(tk.Tk):
             tokens = lexer.tokenize()
 
             output_buffer.append("=" * 50 + "\n")
-            output_buffer.append("词法单元流 (Token Stream)\n")
+            output_buffer.append("词法分析\n")
             output_buffer.append("=" * 50 + "\n")
 
             # 2. 打印带行号的 Token 流，并内联显示错误
@@ -169,7 +168,7 @@ class LexerApp(tk.Tk):
                     attr_ = token.attribute
 
                 # 构建带行号的输出
-                line_prefix = f"[L{token.line:<3}]"  # L 表示 Line, <3 表示左对齐占3位
+                line_prefix = f"[Line{token.line:<3}]"  # L 表示 Line, <3 表示左对齐占3位
                 token_body = f"( {_:<16} <{token.type}>: {attr_} )"
 
                 output_buffer.append(f"    {line_prefix} {token_body}\n")
