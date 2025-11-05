@@ -162,19 +162,16 @@ class Lexer:
                 err = True
             return make_token(CONST_FLOAT, tmp, line=l, err=err)
 
-        # 处理以 0 开头的数字
-        flag_octal = False
+
+        # 处理以 0 开头的数字（八进制/十六进制/0）
         if self.char == '0':
-            flag_octal = True
             tmp += self.char; self.next()
-            
             # 十六进制
             if self.char in 'xX':
                 tmp += self.char; self.next()
                 _ = self.pos
                 while self.char is not None and self.char in HEX_CHAR:
                     tmp += self.char; self.next()
-
                 # 跟随非法字符
                 if self.char is not None and (self.char.isalnum() or self.char == '_'):
                     while self.char is not None and (self.char.isalnum() or self.char == '_'):
@@ -185,9 +182,24 @@ class Lexer:
                     # 0x 后面没有任何十六进制数字
                     self.error('INVALID_HEX', tmp, line=l)
                     err = True
-                    
                 return make_token(CONST_HEX, tmp, line=l, err=err)
+            # 八进制
+            _ = False
+            while self.char is not None and self.char.isdigit():
+                if self.char not in OCTAL_CHAR:
+                    _ = True
+                tmp += self.char; self.next()
+            if self.char is not None and (self.char.isalnum() or self.char == '_'):
+                while self.char is not None and (self.char.isalnum() or self.char == '_'):
+                    tmp += self.char; self.next()
+                self.error('INVALID_OCTAL_DIGIT', tmp, line=l)
+                err = True
+            elif _:
+                self.error('INVALID_OCTAL_DIGIT', tmp, line=l)
+                err = True
+            return make_token(CONST_OCTAL, tmp, line=l, err=err)
 
+        # 十进制
         while self.char is not None and self.char.isdigit():
             tmp += self.char; self.next()
 
@@ -203,30 +215,6 @@ class Lexer:
                 self.error('INVALID_IDENTIFIER', tmp, line=l)
                 err = True
             return make_token(CONST_FLOAT, tmp, line=l, err=err)
-
-        # 检查八进制数的合法性
-        has_invalid_octal_digit = False
-        if flag_octal and not err:
-            for char in tmp[1:]:
-                if char not in OCTAL_CHAR:
-                    has_invalid_octal_digit = True
-                    break
-
-        if self.char is not None and (self.char.isalnum() or self.char == '_'):
-            while self.char is not None and (self.char.isalnum() or self.char == '_'):
-                tmp += self.char
-                self.next()
-            if flag_octal:
-                self.error('INVALID_OCTAL_DIGIT', tmp, line=l)
-            else:
-                self.error('INVALID_IDENTIFIER', tmp, line=l)
-            err = True
-        elif has_invalid_octal_digit:
-            self.error('INVALID_OCTAL_DIGIT', tmp, line=l)
-            err = True
-
-        if flag_octal and len(tmp) > 0:
-            return make_token(CONST_OCTAL, tmp, line=l, err=err)
 
         return make_token(CONST_DECIMAL, tmp, line=l, err=err)
 
