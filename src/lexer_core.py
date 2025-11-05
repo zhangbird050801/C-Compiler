@@ -114,8 +114,7 @@ class Lexer:
             self.error('INVALID_IDENTIFIER', '', line=l)
         tmp = ''
         while self.char is not None and (self.char.isalnum() or self.char == '_'):
-            tmp += self.char
-            self.next()
+            tmp += self.char; self.next()
         type_ = KEYWORDS.get(tmp, ID)
         if type_ == ID:
             self.table.add(tmp)
@@ -210,8 +209,7 @@ class Lexer:
             err = err or err_float
             if self.char is not None and (self.char.isalnum() or self.char == '_'):
                 while self.char is not None and (self.char.isalnum() or self.char == '_'):
-                    tmp += self.char
-                    self.next()
+                    tmp += self.char; self.next()
                 self.error('INVALID_IDENTIFIER', tmp, line=l)
                 err = True
             return make_token(CONST_FLOAT, tmp, line=l, err=err)
@@ -305,8 +303,7 @@ class Lexer:
             if self.char == '\n':
                 break
 
-            tmp += self.char
-            self.next()
+            tmp += self.char; self.next()
         return make_token(PREPROCESSOR, tmp.strip(), line=l)
 
     def next_token(self):
