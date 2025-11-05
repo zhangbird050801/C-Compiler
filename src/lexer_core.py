@@ -19,7 +19,7 @@ class SymbolTable:
         if not self.symbols:
             return "符号表为空"
 
-        result = ["\n" + "=" * 50, "标识符", "=" * 50, f"{'序号':<6} {'标识符':<20}", "-" * 50]
+        result = [f"{'序号':<6} {'标识符':<20}", "-" * 26]
 
         for idx, (name, info) in enumerate(self.symbols.items(), 1):
             result.append(f"{idx:<6} {name:<20}")
@@ -64,19 +64,18 @@ class Lexer:
         pos = self.pos + 1
         return self.text[pos] if pos < len(self.text) else None
 
-    def read_exp(self, tmp):
-        """读取浮点数的指数部分"""
+    def read_exp(self, tmp): 
         tmp += self.char; self.next()
-        if self.char in '+-':
+        if self.char is not None and self.char in '+-':
             tmp += self.char; self.next()
         # +- 后非数字或空
         if not (self.char and self.char.isdigit()):
             return tmp, True
-        while self.char is not None and self.char.isdigit():
+        while self.char is not None and self.char.isdigit(): # 读取指数
             tmp += self.char; self.next()
         return tmp, False
 
-    def skip(self):
+    def skip(self): # 跳过注释
         while self.char is not None:
             if self.char.isspace():
                 self.next()
@@ -94,34 +93,31 @@ class Lexer:
                 self.next()  # skip /
                 self.next()  # skip *
 
-                while self.char is not None and not (self.char == '*' and self.get_next() == '/'):
+                while self.char is not None and not (self.char == '*' and self.get_next() == '/'): # */
                     self.next()
 
-                if self.char is None:
-                    self.error('UNTERMINATED_COMMENT', '', line=l)
+                if self.char is None: 
+                    self.error('UNTERMINATED_COMMENT', '', line=l) # 未闭合
                     break
                 else:
                     self.next()  # skip *
                     self.next()  # skip /
                 continue
-
             break
 
-    def _id(self):
-        """识别关键字或标识符"""
+    def _id(self): # 识别关键词或标识符
         l = self.line
-        if not (self.char and (self.char.isalpha() or self.char == '_')):
+        if not (self.char and (self.char.isalpha() or self.char == '_')): # 不以字母或下划线开头
             self.error('INVALID_IDENTIFIER', '', line=l)
-        tmp = ''
+        _ = ''
         while self.char is not None and (self.char.isalnum() or self.char == '_'):
-            tmp += self.char; self.next()
-        type_ = KEYWORDS.get(tmp, ID)
-        if type_ == ID:
-            self.table.add(tmp)
-        return make_token(type_, tmp, line=l)
+            _ += self.char; self.next()
+        type_ = KEYWORDS.get(_, ID) # 看是关键词还是标识符
+        if type_ == ID: # 添加到标识符表
+            self.table.add(_)
+        return make_token(type_, _, line=l)
 
-    def _float(self, tmp):
-        """处理浮点数的小数部分和指数部分"""
+    def _float(self, tmp): # 处理浮点数的小数部分和指数部分
         flag = False
         err = False
         
@@ -131,16 +127,15 @@ class Lexer:
             while self.char is not None and self.char.isdigit():
                 tmp += self.char; self.next()
 
-        if self.char in 'eE':
+        if self.char is not None and self.char in 'eE':
             flag = True
-            tmp, err = self.read_exp(tmp)
+            tmp, err = self.read_exp(tmp) # 获取指数部分
             if err:
                 self.error('INVALID_FLOAT_EXPONENT', tmp)
 
         return tmp, flag, err
 
-    def _num(self):
-        """识别数字常量（十进制、八进制、十六进制、浮点数）"""
+    def _num(self): # 数字常量
         tmp = ''
         err = False
         l = self.line
@@ -150,7 +145,7 @@ class Lexer:
             tmp += self.char; self.next()
             while self.char is not None and self.char.isdigit():
                 tmp += self.char; self.next()
-            if self.char is not None and self.char in 'eE':
+            if self.char is not None and self.char in 'eE': # 遇到 eE -> 指数
                 tmp, err = self.read_exp(tmp)
                 if err:
                     self.error('INVALID_FLOAT_EXPONENT', tmp, line=l)
@@ -165,7 +160,7 @@ class Lexer:
         if self.char == '0':
             tmp += self.char; self.next()
             # 十六进制
-            if self.char in 'xX':
+            if self.char is not None and self.char in 'xX':
                 tmp += self.char; self.next()
                 _ = self.pos
                 while self.char is not None and self.char in HEX_CHAR:
@@ -198,7 +193,7 @@ class Lexer:
             tmp += self.char; self.next()
 
         # 浮点数 12.xx | 12e+3 | 0.123
-        if self.char == '.' or self.char in 'eE':
+        if self.char is not None and (self.char == '.' or self.char in 'eE'):
             flag_octal = False
             tmp, flag, err_float = self._float(tmp)
             err = err or err_float
@@ -207,6 +202,13 @@ class Lexer:
                     tmp += self.char; self.next()
                 self.error('INVALID_IDENTIFIER', tmp, line=l); err = True
             return make_token(CONST_FLOAT, tmp, line=l, err=err)
+
+        # 检查十进制数后是否跟着字母或下划线（无效标识符）
+        if self.char is not None and (self.char.isalpha() or self.char == '_'):
+            while self.char is not None and (self.char.isalnum() or self.char == '_'):
+                tmp += self.char; self.next()
+            self.error('INVALID_IDENTIFIER', tmp, line=l)
+            err = True
 
         return make_token(CONST_DECIMAL, tmp, line=l, err=err)
 
@@ -278,8 +280,7 @@ class Lexer:
 
         return make_token(CONST_CHAR, tmp, line=l, err=err)
 
-    def _preprocessor(self):
-        """识别预处理指令"""
+    def _preprocessor(self): 
         l = self.line
         tmp = ''
         while self.char is not None:
