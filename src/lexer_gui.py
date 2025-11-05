@@ -2,7 +2,7 @@
 C 语言词法分析器 GUI 界面
 """
 import tkinter as tk
-from tkinter import filedialog, scrolledtext, messagebox, ttk
+from tkinter import filedialog, scrolledtext, messagebox, ttk, font
 from line_number_text import LineNumberText
 from lexer_core import (
     Lexer, TYPES, STRING_, CONST_CHAR, EOF
@@ -17,8 +17,17 @@ class LexerApp(tk.Tk):
         self.title("C 语言词法分析器 (GUI版 v3)")
         self.geometry("1200x700")
 
+        # 设置字体
+        self.default_font = font.nametofont("TkDefaultFont")
+        self.text_font = font.Font(family="Consolas", size=17)  # 修改这里的size值来调整字体大小
+        self.button_font = font.Font(family="Arial", size=17)
+
         style = ttk.Style(self)
         style.theme_use('clam')
+
+        # 设置按钮字体
+        style.configure('TButton', font=self.button_font)
+        style.configure('TLabel', font=self.button_font)
 
         self.create_widgets()
 
@@ -52,7 +61,7 @@ class LexerApp(tk.Tk):
         ttk.Label(input_frame, text="C 源代码输入:").grid(row=0, column=0, sticky='w', pady=5)
         
         # 使用带行号的文本编辑器
-        self.input_text = LineNumberText(input_frame, wrap=tk.WORD, height=10, width=60)
+        self.input_text = LineNumberText(input_frame, wrap=tk.WORD, height=10, width=60, font=self.text_font)
         self.input_text.grid(row=1, column=0, sticky='nsew')
         
         paned_window.add(input_frame, weight=1)
@@ -65,7 +74,7 @@ class LexerApp(tk.Tk):
         ttk.Label(output_frame, text="分析结果:").grid(row=0, column=0, sticky='w', pady=5)
         
         self.output_text = scrolledtext.ScrolledText(
-            output_frame, wrap=tk.WORD, height=10, width=60, state='disabled'
+            output_frame, wrap=tk.WORD, height=10, width=60, state='disabled', font=self.text_font
         )
         self.output_text.grid(row=1, column=0, sticky='nsew')
         
