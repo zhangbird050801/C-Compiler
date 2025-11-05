@@ -79,7 +79,7 @@ class SymbolTable:
 
     def add(self, name):
         if name not in self.symbols:
-            self.symbols[name] = {'name': name, 'type': None}
+            self.symbols[name] = {'name': name}
         return self.symbols[name]
 
     def __str__(self):
@@ -87,14 +87,13 @@ class SymbolTable:
             return "符号表为空"
 
         result = ["\n" + "=" * 50]
-        result.append("符号表 (Symbol Table)")
+        result.append("标识符")
         result.append("=" * 50)
-        result.append(f"{'序号':<6} {'标识符':<20} {'类型':<15}")
+        result.append(f"{'序号':<6} {'标识符':<20}")
         result.append("-" * 50)
 
         for idx, (name, info) in enumerate(self.symbols.items(), 1):
-            type_str = info['type'] if info['type'] else '未定义'
-            result.append(f"{idx:<6} {name:<20} {type_str:<15}")
+            result.append(f"{idx:<6} {name:<20}")
 
         result.append("=" * 50)
         result.append(f"总计: {len(self.symbols)} 个标识符")
