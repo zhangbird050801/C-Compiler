@@ -225,12 +225,16 @@ class Lexer:
                 if self.char is None:
                     self.error('UNTERMINATED_STRING', tmp, line=l); err = True
                     break
+                if self.char == '\n':
+                    self.next()
+                    continue
                 tmp += self.char; self.next()
             else:
                 tmp += self.char; self.next()
                 
         if self.char == '\n':
-            self.error('STRING_NEWLINE', tmp, line=l); err = True
+            # 遇到换行符意味着字符串未闭合
+            self.error('UNTERMINATED_STRING', tmp, line=l); err = True
         elif self.char == '"':
             self.next()
         else:
