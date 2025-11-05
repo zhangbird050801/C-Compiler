@@ -3,7 +3,6 @@ from collections import namedtuple
 TOKEN = namedtuple('Token', ['type', 'attribute', 'line', 'is_error'])
 
 def make_token(type_, attr, line, is_error=False):
-    """创建一个 Token"""
     return TOKEN(type_, attr, line, is_error)
 
 # 关键字映射表
@@ -31,7 +30,6 @@ DL = {
 # 其他 Token 类型
 ID, CONST_DECIMAL, CONST_OCTAL, CONST_HEX, CONST_FLOAT, CONST_CHAR, STRING_, PREPROCESSOR = 82, 83, 84, 85, 86, 87, 88, 89
 
-CONST_BASE36 = 91
 EOF = -1
 
 # 字符集定义
@@ -69,10 +67,7 @@ TYPES[ID], TYPES[CONST_DECIMAL], TYPES[CONST_OCTAL], TYPES[CONST_HEX], TYPES[CON
     STRING_], TYPES[PREPROCESSOR], TYPES[EOF] \
     = 'IDENTIFIER', 'CONST_DECIMAL', 'CONST_OCTAL', 'CONST_HEX', 'CONST_FLOAT', 'CONST_CHAR', 'STRING_LITERAL', 'PREPROCESSOR', 'EOF'
 
-TYPES[CONST_BASE36] = 'CONST_BASE36'
-
 # 3. 符号表类
-
 class SymbolTable:
     def __init__(self):
         self.symbols = {}
@@ -86,18 +81,10 @@ class SymbolTable:
         if not self.symbols:
             return "符号表为空"
 
-        result = ["\n" + "=" * 50]
-        result.append("标识符")
-        result.append("=" * 50)
-        result.append(f"{'序号':<6} {'标识符':<20}")
-        result.append("-" * 50)
+        result = ["\n" + "=" * 50, "标识符", "=" * 50, f"{'序号':<6} {'标识符':<20}", "-" * 50]
 
         for idx, (name, info) in enumerate(self.symbols.items(), 1):
             result.append(f"{idx:<6} {name:<20}")
-
-        result.append("=" * 50)
-        result.append(f"总计: {len(self.symbols)} 个标识符")
-        result.append("=" * 50)
 
         return "\n".join(result)
 
@@ -117,15 +104,14 @@ class Lexer:
         self.symbols = sorted(t_.items(), key=lambda x: len(x[0]), reverse=True)
 
     def error(self, error, content='', line=None, *args):
-        """记录错误信息"""
-        report_line = line if line is not None else self.line
+        num = line if line is not None else self.line
         m = ERRORS.get(error, "未知错误").format(*args)
         if content:
-            error_msg = f'错误: {m}, 内容: "{content}" at line {report_line}'
+            _ = f'错误: {m}, 内容: "{content}" at line {num}'
         else:
-            error_msg = f'错误: {m} at line {report_line}'
-        self.errors.append(error_msg)
-        return error_msg
+            _ = f'错误: {m} at line {num}'
+        self.errors.append(_)
+        return _
 
     def next(self):
         """移动到下一个字符"""
@@ -136,8 +122,7 @@ class Lexer:
         self.col += 1
         self.char = self.text[self.pos] if self.pos < len(self.text) else None
 
-    def skip_whitespace_and_comments(self):
-        """跳过所有空白字符、单行注释和多行注释"""
+    def skip(self):
         while self.char is not None:
             if self.char.isspace():
                 self.next()
@@ -151,7 +136,7 @@ class Lexer:
 
             # 处理 /* */ 多行注释
             if self.char == '/' and self.pos + 1 < len(self.text) and self.text[self.pos + 1] == '*':
-                start_line = self.line
+                l = self.line
                 self.next()  # skip /
                 self.next()  # skip *
 
@@ -160,21 +145,20 @@ class Lexer:
                     self.next()
 
                 if self.char is None:
-                    self.error('UNTERMINATED_COMMENT', '', line=start_line)
+                    self.error('UNTERMINATED_COMMENT', '', line=l)
                     break
                 else:
                     self.next()  # skip *
                     self.next()  # skip /
                 continue
 
-            # 既不是空白也不是注释，停止
             break
 
     def _id(self):
         """识别关键字或标识符"""
-        start_line = self.line
+        l = self.line
         if not (self.char and (self.char.isalpha() or self.char == '_')):
-            self.error('INVALID_IDENTIFIER', '', line=start_line)
+            self.error('INVALID_IDENTIFIER', '', line=l)
         tmp = ''
         while self.char is not None and (self.char.isalnum() or self.char == '_'):
             tmp += self.char
@@ -182,7 +166,7 @@ class Lexer:
         type_ = KEYWORDS.get(tmp, ID)
         if type_ == ID:
             self.table.add(tmp)
-        return make_token(type_, tmp, line=start_line)
+        return make_token(type_, tmp, line=l)
 
     def _float(self, tmp):
         """处理浮点数的小数部分和指数部分"""
@@ -220,7 +204,7 @@ class Lexer:
         """识别数字常量（十进制、八进制、十六进制、浮点数）"""
         tmp = ''
         is_error = False
-        start_line = self.line
+        l = self.line
 
         # 处理以 . 开头的浮点数
         if self.char == '.':
@@ -229,14 +213,14 @@ class Lexer:
             while self.char is not None and self.char.isdigit():
                 tmp += self.char
                 self.next()
-            if self.char in 'eE':
+            if self.char is not None and self.char in 'eE':
                 tmp += self.char
                 self.next()
                 if self.char in '+-':
                     tmp += self.char
                     self.next()
                 if not (self.char and self.char.isdigit()):
-                    self.error('INVALID_FLOAT_EXPONENT', tmp, line=start_line)
+                    self.error('INVALID_FLOAT_EXPONENT', tmp, line=l)
                     is_error = True
                 while self.char is not None and self.char.isdigit():
                     tmp += self.char
@@ -245,14 +229,14 @@ class Lexer:
                 while self.char is not None and (self.char.isalnum() or self.char == '_'):
                     tmp += self.char
                     self.next()
-                self.error('INVALID_IDENTIFIER', tmp, line=start_line)
+                self.error('INVALID_IDENTIFIER', tmp, line=l)
                 is_error = True
-            return make_token(CONST_FLOAT, tmp, line=start_line, is_error=is_error)
+            return make_token(CONST_FLOAT, tmp, line=l, is_error=is_error)
 
         # 处理以 0 开头的数字（可能是八进制或十六进制）
-        is_octal_candidate = False
+        flag_octal = False
         if self.char == '0':
-            is_octal_candidate = True
+            flag_octal = True
             tmp += self.char
             self.next()
             
@@ -268,9 +252,9 @@ class Lexer:
                     while self.char is not None and (self.char.isalnum() or self.char == '_'):
                         tmp += self.char
                         self.next()
-                    self.error('INVALID_HEX', tmp, line=start_line)
+                    self.error('INVALID_HEX', tmp, line=l)
                     is_error = True
-                return make_token(CONST_HEX, tmp, line=start_line, is_error=is_error)
+                return make_token(CONST_HEX, tmp, line=l, is_error=is_error)
 
         # 继续读取数字
         while self.char is not None and self.char.isdigit():
@@ -279,48 +263,48 @@ class Lexer:
 
         # 检查是否是浮点数
         if self.char == '.' or self.char in 'eE':
-            is_octal_candidate = False
+            flag_octal = False
             tmp, flag, is_error_float = self._float(tmp)
             is_error = is_error or is_error_float
             if self.char is not None and (self.char.isalpha() or self.char == '_'):
                 while self.char is not None and (self.char.isalnum() or self.char == '_'):
                     tmp += self.char
                     self.next()
-                self.error('INVALID_IDENTIFIER', tmp, line=start_line)
+                self.error('INVALID_IDENTIFIER', tmp, line=l)
                 is_error = True
-            return make_token(CONST_FLOAT, tmp, line=start_line, is_error=is_error)
+            return make_token(CONST_FLOAT, tmp, line=l, is_error=is_error)
 
         # 检查是否有非法字符跟随
         if self.char is not None and (self.char.isalpha() or self.char == '_'):
             while self.char is not None and (self.char.isalnum() or self.char == '_'):
                 tmp += self.char
                 self.next()
-            self.error('INVALID_IDENTIFIER', tmp, line=start_line)
+            self.error('INVALID_IDENTIFIER', tmp, line=l)
             is_error = True
 
         # 检查八进制数的合法性
         has_invalid_octal_digit = False
-        if is_octal_candidate:
+        if flag_octal:
             for char in tmp[1:]:
                 if char not in OCTAL_CHAR:
                     has_invalid_octal_digit = True
                     break
 
         if has_invalid_octal_digit:
-            self.error('INVALID_OCTAL_DIGIT', tmp, line=start_line)
+            self.error('INVALID_OCTAL_DIGIT', tmp, line=l)
             is_error = True
-            return make_token(CONST_OCTAL, tmp, line=start_line, is_error=is_error)
+            return make_token(CONST_OCTAL, tmp, line=l, is_error=is_error)
 
-        if is_octal_candidate and len(tmp) > 0:
-            return make_token(CONST_OCTAL, tmp, line=start_line, is_error=is_error)
+        if flag_octal and len(tmp) > 0:
+            return make_token(CONST_OCTAL, tmp, line=l, is_error=is_error)
 
-        return make_token(CONST_DECIMAL, tmp, line=start_line, is_error=is_error)
+        return make_token(CONST_DECIMAL, tmp, line=l, is_error=is_error)
 
     def _str(self):
         """识别字符串常量"""
         tmp = ''
         is_error = False
-        start_line = self.line
+        l = self.line
         self.next()  # skip opening "
         
         while self.char is not None and self.char != '"' and self.char != '\n':
@@ -328,7 +312,7 @@ class Lexer:
                 tmp += self.char
                 self.next()
                 if self.char is None:
-                    self.error('UNTERMINATED_STRING', tmp, line=start_line)
+                    self.error('UNTERMINATED_STRING', tmp, line=l)
                     is_error = True
                     break
                 tmp += self.char
@@ -338,39 +322,39 @@ class Lexer:
                 self.next()
                 
         if self.char == '\n':
-            self.error('STRING_NEWLINE', tmp, line=start_line)
+            self.error('STRING_NEWLINE', tmp, line=l)
             is_error = True
         elif self.char == '"':
             self.next()
         else:
-            self.error('UNTERMINATED_STRING', tmp, line=start_line)
+            self.error('UNTERMINATED_STRING', tmp, line=l)
             is_error = True
-        return make_token(STRING_, tmp, line=start_line, is_error=is_error)
+        return make_token(STRING_, tmp, line=l, is_error=is_error)
 
     def _char(self):
         """识别字符常量"""
         tmp = ''
         is_error = False
-        start_line = self.line
+        l = self.line
         self.next()  # skip opening '
 
         # 空字符常量
         if self.char == "'":
-            self.error('EMPTY_CHAR', '', line=start_line)
+            self.error('EMPTY_CHAR', '', line=l)
             self.next()
-            return make_token(CONST_CHAR, tmp, line=start_line, is_error=True)
+            return make_token(CONST_CHAR, tmp, line=l, is_error=True)
 
         if self.char is None:
-            self.error('UNTERMINATED_CHAR', tmp, line=start_line)
-            return make_token(CONST_CHAR, tmp, line=start_line, is_error=True)
+            self.error('UNTERMINATED_CHAR', tmp, line=l)
+            return make_token(CONST_CHAR, tmp, line=l, is_error=True)
 
         # 处理转义字符
         if self.char == '\\':
             tmp += self.char
             self.next()
             if self.char is None:
-                self.error('UNTERMINATED_CHAR', tmp, line=start_line)
-                return make_token(CONST_CHAR, tmp, line=start_line, is_error=True)
+                self.error('UNTERMINATED_CHAR', tmp, line=l)
+                return make_token(CONST_CHAR, tmp, line=l, is_error=True)
             tmp += self.char
             self.next()
         else:
@@ -383,21 +367,21 @@ class Lexer:
             while self.char is not None and self.char != "'" and self.char != '\n':
                 extra_chars += self.char
                 self.next()
-            self.error('MULTI_CHAR', tmp + extra_chars, line=start_line)
+            self.error('MULTI_CHAR', tmp + extra_chars, line=l)
             is_error = True
             tmp = tmp + extra_chars
 
         if self.char != "'":
-            self.error('UNTERMINATED_CHAR', tmp, line=start_line)
+            self.error('UNTERMINATED_CHAR', tmp, line=l)
             is_error = True
         else:
             self.next()
 
-        return make_token(CONST_CHAR, tmp, line=start_line, is_error=is_error)
+        return make_token(CONST_CHAR, tmp, line=l, is_error=is_error)
 
     def _preprocessor(self):
         """识别预处理指令"""
-        start_line = self.line
+        l = self.line
         tmp = ''
         while self.char is not None:
             # 处理续行符
@@ -413,17 +397,17 @@ class Lexer:
 
             tmp += self.char
             self.next()
-        return make_token(PREPROCESSOR, tmp.strip(), line=start_line)
+        return make_token(PREPROCESSOR, tmp.strip(), line=l)
 
     def next_token(self):
         while self.char is not None:
-            self.skip_whitespace_and_comments()
+            self.skip()
 
             _ = self.char
             if _ is None:
                 continue
 
-            start_line = self.line
+            l = self.line
 
             if _ == '#':
                 return self._preprocessor()
@@ -443,11 +427,11 @@ class Lexer:
                 if self.text.startswith(s, self.pos):
                     for _ in range(len(s)):
                         self.next()
-                    return make_token(t, s, line=start_line)
+                    return make_token(t, s, line=l)
 
             # 未知字符
             unknown_char = self.char
-            self.error('UNKNOWN_CHAR', unknown_char, line=start_line)
+            self.error('UNKNOWN_CHAR', unknown_char, line=l)
             self.next()
 
         return make_token(EOF, 'EOF', line=self.line)
