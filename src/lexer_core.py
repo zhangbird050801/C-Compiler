@@ -171,10 +171,8 @@ class Lexer:
                 err = err or err_float
                 if self.char is not None and (self.char.isalnum() or self.char == '_'):
                     while self.char is not None and (self.char.isalnum() or self.char == '_'):
-                        tmp += self.char;
-                        self.next()
-                    self.error('INVALID_IDENTIFIER', tmp, line=l);
-                    err = True
+                        tmp += self.char; self.next()
+                    self.error('INVALID_IDENTIFIER', tmp, line=l); err = True
                 return make_token(CONST_FLOAT, tmp, line=l, err=err)
             # 十六进制
             if self.char is not None and self.char in 'xX':
