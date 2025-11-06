@@ -1,5 +1,5 @@
 from collections import namedtuple
-from constants import (KEYWORDS, OP, DL, ID, CONST_DECIMAL, CONST_OCTAL, CONST_HEX, CONST_FLOAT, CONST_CHAR, STRING_, PREPROCESSOR, CONST_INT36, EOF, HEX_CHAR, OCTAL_CHAR, BASE36_CHAR, ERRORS, TYPES)
+from constants import (KEYWORDS, OP, DL, ID, CONST_DECIMAL, CONST_OCTAL, CONST_HEX, CONST_FLOAT, CONST_CHAR, STRING_, PREPROCESSOR,  EOF, HEX_CHAR, OCTAL_CHAR, ERRORS, TYPES)
 
 TOKEN = namedtuple('Token', ['type', 'attribute', 'line', 'error'])
 
@@ -119,13 +119,6 @@ class Lexer:
         if type_ is not None:
             return make_token(type_, _, line=l)
 
-        # 检查是否是36进制数：包含数字且不含下划线且全在BASE36范围内
-        f_1 = any(c.isdigit() for c in _)
-        f_2 = '_' in _
-        f_3 = all(c in BASE36_CHAR for c in _)
-
-        if f_1 and not f_2 and f_3:
-            return make_token(CONST_INT36, _, line=l)
         # 否则是标识符
         self.table.add(_)
         return make_token(ID, _, line=l)
@@ -172,6 +165,17 @@ class Lexer:
         # 处理以 0 开头的数字（八进制/十六进制/0）
         if self.char == '0':
             tmp += self.char; self.next()
+            # 检查是否是 0.xxx 形式的浮点数
+            if self.char == '.':
+                tmp, flag, err_float = self._float(tmp)
+                err = err or err_float
+                if self.char is not None and (self.char.isalnum() or self.char == '_'):
+                    while self.char is not None and (self.char.isalnum() or self.char == '_'):
+                        tmp += self.char;
+                        self.next()
+                    self.error('INVALID_IDENTIFIER', tmp, line=l);
+                    err = True
+                return make_token(CONST_FLOAT, tmp, line=l, err=err)
             # 十六进制
             if self.char is not None and self.char in 'xX':
                 tmp += self.char; self.next()
@@ -205,9 +209,8 @@ class Lexer:
         while self.char is not None and self.char.isdigit():
             tmp += self.char; self.next()
 
-        # 浮点数 12.xx | 12e+3 | 0.123
+        # 浮点数 12.xx | 12e+3
         if self.char is not None and (self.char == '.' or self.char in 'eE'):
-            flag_octal = False
             tmp, flag, err_float = self._float(tmp)
             err = err or err_float
             if self.char is not None and (self.char.isalnum() or self.char == '_'):
@@ -220,10 +223,7 @@ class Lexer:
         if self.char is not None and (self.char.isalpha() or self.char == '_'):
             while self.char is not None and (self.char.isalnum() or self.char == '_'):
                 tmp += self.char; self.next()
-            # 检查是否包含下划线或非36进制字符
-            if '_' in tmp or not all(c in BASE36_CHAR for c in tmp):
-                self.error('INVALID_INT36', tmp, line=l); err = True
-            return make_token(CONST_INT36, tmp, line=l, err=err)
+            self.error('INVALID_IDENTIFIER', tmp, line=l); err = True
 
         return make_token(CONST_DECIMAL, tmp, line=l, err=err)
 
