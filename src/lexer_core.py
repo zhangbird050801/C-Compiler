@@ -172,6 +172,15 @@ class Lexer:
         # 处理以 0 开头的数字（八进制/十六进制/0）
         if self.char == '0':
             tmp += self.char; self.next()
+            # 检查是否是 0.xxx 形式的浮点数
+            if self.char is not None and self.char == '.':
+                tmp, flag, err_float = self._float(tmp)
+                err = err or err_float
+                if self.char is not None and (self.char.isalnum() or self.char == '_'):
+                    while self.char is not None and (self.char.isalnum() or self.char == '_'):
+                        tmp += self.char; self.next()
+                    self.error('INVALID_IDENTIFIER', tmp, line=l); err = True
+                return make_token(CONST_FLOAT, tmp, line=l, err=err)
             # 十六进制
             if self.char is not None and self.char in 'xX':
                 tmp += self.char; self.next()
@@ -205,9 +214,8 @@ class Lexer:
         while self.char is not None and self.char.isdigit():
             tmp += self.char; self.next()
 
-        # 浮点数 12.xx | 12e+3 | 0.123
+        # 浮点数 12.xx | 12e+3
         if self.char is not None and (self.char == '.' or self.char in 'eE'):
-            flag_octal = False
             tmp, flag, err_float = self._float(tmp)
             err = err or err_float
             if self.char is not None and (self.char.isalnum() or self.char == '_'):
@@ -220,6 +228,7 @@ class Lexer:
         if self.char is not None and (self.char.isalpha() or self.char == '_'):
             while self.char is not None and (self.char.isalnum() or self.char == '_'):
                 tmp += self.char; self.next()
+            # self.error('INVALID_IDENTIFIER', tmp, line=l); err = True
             # 检查是否包含下划线或非36进制字符
             if '_' in tmp or not all(c in BASE36_CHAR for c in tmp):
                 self.error('INVALID_INT36', tmp, line=l); err = True
