@@ -155,6 +155,8 @@ class Lexer:
                 tmp, err = self.read_exp(tmp)
                 if err:
                     self.error('INVALID_FLOAT_EXPONENT', tmp, line=l)
+            if self.char is not None and self.char in 'fFlL':
+                tmp += self.char; self.next()
             if self.char is not None and (self.char.isalnum() or self.char == '_'):
                 while self.char is not None and (self.char.isalnum() or self.char == '_'):
                     tmp += self.char; self.next()
@@ -169,6 +171,8 @@ class Lexer:
             if self.char == '.':
                 tmp, flag, err_float = self._float(tmp)
                 err = err or err_float
+                if self.char is not None and self.char in 'fFlL':
+                    tmp += self.char; self.next()
                 if self.char is not None and (self.char.isalnum() or self.char == '_'):
                     while self.char is not None and (self.char.isalnum() or self.char == '_'):
                         tmp += self.char; self.next()
@@ -211,6 +215,8 @@ class Lexer:
         if self.char is not None and (self.char == '.' or self.char in 'eE'):
             tmp, flag, err_float = self._float(tmp)
             err = err or err_float
+            if self.char is not None and self.char in 'fFlL':
+                tmp += self.char; self.next()
             if self.char is not None and (self.char.isalnum() or self.char == '_'):
                 while self.char is not None and (self.char.isalnum() or self.char == '_'):
                     tmp += self.char; self.next()

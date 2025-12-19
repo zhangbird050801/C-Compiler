@@ -1,52 +1,25 @@
-#include<stdio.h>
-#define N 5
+#include <stdio.h>
 
-int a = 6;
+typedef struct student {
+    char *name;    // 姓名
+    int num;       // 学号
+    int age;       // 年龄
+    float score;   // 成绩
+} student;
 
-int aaa(int a, int b) {
-    return a + b;
-}
+int main(void) {
+    int i, num_140 = 0;
+    float sum = 0.0f;
+    int flag = 0;
 
-int main() {
-    int a = 0, b = 2;
-    printf("Hello, world!\n");
-    // 这是一行注释
+    student sts[2] = {
+        {"Li ping",   5, 18, 145.0f},
+        {"Wang ming", 6, 18, 150.0f}
+    };
 
-    /*
-        这是很多行注释
-        abcsd
-        qw
-    */
+    if (sts[1].score < 140.0f) flag = -1;
+    else flag = 1;
 
-    // float a, b;
-    double c = 123.0007;
-    int f = 0xF5;
-    int q = 077;
-    int test2 = 0xfz;
-    int test1 = 099;
-    //int 1ab;
-    float x = 1e4;
-    float y = 1.2e-5;
-    double a_123;
-    // float 13.1;
-    //int ff = 0xQQ;
-    //int xx = 099;
-
-    char ff = '\n';
-
-    printf("Birdy：\"Hello！\"");
-    printf("HEllo\n");
-    printf("qweqwe";
-    char *s = "Hello World\f";
-    char c = 'abc';
-    int i = 0;
-    /* 这是一个未闭合的注释
-int main() {
-// 错误: 未闭合的块注释 at line X
-
-    do {
-        i ++;
-    } while(i < 10);
-
+    printf("%d ", flag);
     return 0;
 }

@@ -1,247 +1,329 @@
-# parser_core.py
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Dict, List, Tuple, Set, Optional
+
 from constants import TYPES, EOF
+
+EPS = "epsilon"
+
+
+@dataclass(frozen=True)
+class Grammar:
+    start: str
+    prods: Dict[str, List[List[str]]]
+
+    @property
+    def nonterminals(self) -> Set[str]:
+        return set(self.prods.keys())
+
+    @property
+    def terminals(self) -> Set[str]:
+        nts = self.nonterminals
+        ts: Set[str] = set()
+        for alts in self.prods.values():
+            for rhs in alts:
+                for s in rhs:
+                    if s != EPS and s not in nts:
+                        ts.add(s)
+        ts.add("EOF")
+        return ts
+
+
+def c_grammar() -> Grammar:
+    g: Dict[str, List[List[str]]] = {
+        "S": [["Decl", "S"], [EPS]],
+
+        "Decl": [["TypedefDecl"], ["StructDecl"], ["NonStructDecl"]],
+        "NonStructDecl": [["Type", "id", "DeclSuf"]],
+
+        "TypedefDecl": [["typedef", "TypedefRhs", ";"]],
+        "TypedefRhs": [["Type", "TypeAlias"], ["TypedefStruct"]],
+        "TypedefStruct": [["struct", "TypedefStructHead"]],
+        "TypedefStructHead": [["{", "MemberList", "}", "TypeAlias"], ["id", "TypedefStructTail"]],
+        "TypedefStructTail": [["{", "MemberList", "}", "TypeAlias"], ["TypeAlias"]],
+        "TypeAlias": [["id"]],
+
+        "StructDecl": [["struct", "StructHead"]],
+        "StructHead": [["id", "StructAfterTag"], ["{", "MemberList", "}", "AfterStructBody"]],
+        "StructAfterTag": [["{", "MemberList", "}", "AfterStructBody"], ["Ptr", "id", "DeclSuf"]],
+        "AfterStructBody": [[";"], ["Ptr", "id", "DeclSuf"]],
+
+        "Type": [["BaseType", "Ptr"], ["type_id", "Ptr"]],
+        "BaseType": [["int"], ["char"], ["float"], ["double"], ["void"], ["long"], ["short"], ["signed"], ["unsigned"]],
+        "Ptr": [["*", "Ptr"], [EPS]],
+
+        "DeclSuf": [["(", "Params", ")", "Block"], ["VarTail"]],
+
+        "VarTail": [["VarSuf", "InitOpt", "NextDecl"]],
+        "VarSuf": [["[", "int_lit", "]"], [EPS]],
+        "InitOpt": [["=", "Init"], [EPS]],
+        "NextDecl": [[";"], [",", "id", "VarTail"]],
+
+        "Init": [["{", "InitList", "}"], ["Expr"]],
+        "InitList": [["Init", "NextInit"]],
+        "NextInit": [[",", "InitList"], [EPS]],
+
+        "MemberList": [["Member", "MemberList"], [EPS]],
+        "Member": [["MemberType", "id", "VarSuf", ";"]],
+        "MemberType": [["Type"], ["struct", "id", "Ptr"]],
+
+        "Block": [["{", "StmtList", "}"]],
+        "StmtList": [["Stmt", "StmtList"], [EPS]],
+
+        "Stmt": [["DeclStmt"], ["RetStmt"], ["IfStmt"], ["ForStmt"], ["Block"], ["SimpleStmt", ";"]],
+
+        "DeclStmt": [["Decl"]],
+
+        "RetStmt": [["return", "RetVal", ";"]],
+        "RetVal": [["Expr"], [EPS]],
+
+        "IfStmt": [["if", "(", "Expr", ")", "Stmt", "ElsePart"]],
+        "ElsePart": [["else", "Stmt"]],
+
+        "ForStmt": [["for", "(", "ForInit", ";", "ExprOpt", ";", "ForStep", ")", "Stmt"]],
+        "ForInit": [["DeclStmt"], ["SimpleStmt"], [EPS]],
+        "ExprOpt": [["Expr"], [EPS]],
+        "ForStep": [["SimpleStmt"], [EPS]],
+
+        "SimpleStmt": [["id", "AssignOrCall"]],
+        "AssignOrCall": [["AssignOp", "Expr"], ["(", "Args", ")"], [".", "id", "AssignOrCall"], ["[", "Expr", "]", "AssignOrCall"]],
+        "AssignOp": [["="]],
+
+        "Expr": [["Term", "E_"]],
+        "E_": [["OP", "Term", "E_"], [EPS]],
+
+        "Term": [["id", "TermSuf"], ["int_lit"], ["float_lit"], ["string_lit"], ["char_lit"], ["(", "Expr", ")"], ["Unary", "Term"]],
+        "Unary": [["OP"], ["*"]],
+
+        "TermSuf": [["[", "Expr", "]", "TermSuf"], [".", "id", "TermSuf"], [EPS]],
+
+        "Params": [["void"], [EPS]],
+        "Args": [["Expr", "NextArg"], [EPS]],
+        "NextArg": [[",", "Args"], [EPS]],
+    }
+    return Grammar("S", g)
+
+
+def first_sets(g: Grammar) -> Dict[str, Set[str]]:
+    nts = g.nonterminals
+    ts = g.terminals
+    first: Dict[str, Set[str]] = {A: set() for A in nts}
+
+    def f_sym(x: str) -> Set[str]:
+        if x == EPS:
+            return {EPS}
+        if x in ts and x not in nts:
+            return {x}
+        if x not in nts:
+            return {x}
+        return first[x]
+
+    changed = True
+    while changed:
+        changed = False
+        for A, alts in g.prods.items():
+            for rhs in alts:
+                acc: Set[str] = set()
+                nullable = True
+                for s in rhs:
+                    fs = f_sym(s)
+                    acc |= {t for t in fs if t != EPS}
+                    if EPS not in fs:
+                        nullable = False
+                        break
+                if nullable:
+                    acc.add(EPS)
+                if not acc.issubset(first[A]):
+                    first[A] |= acc
+                    changed = True
+    return first
+
+
+def first_seq(seq: List[str], g: Grammar, first: Dict[str, Set[str]]) -> Set[str]:
+    ts = g.terminals
+    nts = g.nonterminals
+
+    def f_sym(x: str) -> Set[str]:
+        if x == EPS:
+            return {EPS}
+        if x in ts and x not in nts:
+            return {x}
+        if x not in nts:
+            return {x}
+        return first[x]
+
+    if not seq:
+        return {EPS}
+    out: Set[str] = set()
+    for s in seq:
+        fs = f_sym(s)
+        out |= {t for t in fs if t != EPS}
+        if EPS not in fs:
+            return out
+    out.add(EPS)
+    return out
+
+
+def follow_sets(g: Grammar, first: Dict[str, Set[str]]) -> Dict[str, Set[str]]:
+    nts = g.nonterminals
+    follow: Dict[str, Set[str]] = {A: set() for A in nts}
+    follow[g.start].add("EOF")
+
+    changed = True
+    while changed:
+        changed = False
+        for A, alts in g.prods.items():
+            for rhs in alts:
+                for i, B in enumerate(rhs):
+                    if B not in nts:
+                        continue
+                    beta = rhs[i + 1:]
+                    fb = first_seq(beta, g, first)
+                    add1 = {t for t in fb if t != EPS}
+                    if not add1.issubset(follow[B]):
+                        follow[B] |= add1
+                        changed = True
+                    if EPS in fb:
+                        if not follow[A].issubset(follow[B]):
+                            follow[B] |= follow[A]
+                            changed = True
+    return follow
+
+
+def select_sets(g: Grammar, first: Dict[str, Set[str]], follow: Dict[str, Set[str]]):
+    sel: Dict[Tuple[str, Tuple[str, ...]], Set[str]] = {}
+    for A, alts in g.prods.items():
+        for rhs in alts:
+            frhs = first_seq(rhs, g, first)
+            s = {t for t in frhs if t != EPS}
+            if EPS in frhs:
+                s |= follow.get(A, set())
+            sel[(A, tuple(rhs))] = s
+    return sel
+
+
+def build_parse_table(select: Dict[Tuple[str, Tuple[str, ...]], Set[str]]):
+    table: Dict[Tuple[str, str], List[str]] = {}
+    conflicts: List[Tuple[str, str, List[str], List[str]]] = []
+    for (A, rhs), terms in select.items():
+        rhs_list = list(rhs)
+        for a in terms:
+            key = (A, a)
+            if key in table and table[key] != rhs_list:
+                conflicts.append((A, a, table[key], rhs_list))
+            else:
+                table[key] = rhs_list
+    return table, conflicts
 
 
 class LL1Parser:
-    def __init__(self):
-        # 1. 终结符集合
-        self.terminals = [
-            'KEYWORD', 'IDENTIFIER', 'OPERATOR', 'DELIMITER',
-            'CONST_DECIMAL', 'CONST_OCTAL', 'CONST_HEX',
-            'CONST_FLOAT', 'CONST_CHAR', 'STRING_LITERAL', 'EOF'
-        ]
+    def __init__(self, grammar: Optional[Grammar] = None):
+        self.grammar = grammar or c_grammar()
 
-        # 2. 预测分析表 (包含针对 DeclSuffix = 的修复)
-        self.table = {
-            # --- 程序骨架 ---
-            ('S', 'struct'): ['Decl', 'S'],
-            ('S', 'KEYWORD'): ['Decl', 'S'],
-            ('S', 'IDENTIFIER'): ['Decl', 'S'],
-            ('S', 'EOF'): ['epsilon'],
+        self.first = first_sets(self.grammar)
+        self.follow = follow_sets(self.grammar, self.first)
+        self.select = select_sets(self.grammar, self.first, self.follow)
 
-            # --- 声明 ---
-            ('Decl', 'struct'): ['struct', 'IDENTIFIER', '{', 'MemberList', '}', 'OptSemicolon'],
-            ('Decl', 'KEYWORD'): ['Type', 'IDENTIFIER', 'DeclSuffix'],
-            ('Decl', 'IDENTIFIER'): ['Type', 'IDENTIFIER', 'DeclSuffix'],
+        self.table, self.conflicts = build_parse_table(self.select)
+        self.terminals = self.grammar.terminals
 
-            ('OptSemicolon', ';'): [';'],
-            ('OptSemicolon', 'EOF'): ['epsilon'],
-            ('OptSemicolon', 'KEYWORD'): ['epsilon'],
-            ('OptSemicolon', 'struct'): ['epsilon'],
-            ('OptSemicolon', '}'): ['epsilon'],
-            ('OptSemicolon', 'IDENTIFIER'): ['epsilon'],
+        self.typedef_names: Set[str] = set()
+        self._capture_typedef_alias = False
 
-            # --- 结构体成员 ---
-            ('MemberList', 'KEYWORD'): ['Member', 'MemberList'],
-            ('MemberList', 'IDENTIFIER'): ['Member', 'MemberList'],
-            ('MemberList', '}'): ['epsilon'],
-            ('Member', 'KEYWORD'): ['Type', 'IDENTIFIER', 'VarSuffix', ';'],
-            ('Member', 'IDENTIFIER'): ['Type', 'IDENTIFIER', 'VarSuffix', ';'],
+    def symbolize(self, tok) -> str:
+        tname = TYPES.get(tok.type, "UNKNOWN")
+        attr = tok.attribute
 
-            ('VarSuffix', '['): ['[', 'CONST_DECIMAL', ']'],
-            ('VarSuffix', ';'): ['epsilon'],
+        if tname == "PREPROCESSOR":
+            return ""
+        if tok.type == EOF or tname == "EOF":
+            return "EOF"
 
-            # --- 类型系统 (双保险策略) ---
-            ('Type', 'KEYWORD'): ['KEYWORD', 'Ptr'],
-            ('Type', 'IDENTIFIER'): ['IDENTIFIER', 'Ptr'],
+        if tname == "KEYWORD":
+            return attr
+        if tname == "DELIMITER":
+            return attr
+        if tname == "OPERATOR":
+            if attr in ["=", ".", "*"]:
+                return attr
+            return "OP"
+        if tname == "IDENTIFIER":
+            if attr in self.typedef_names:
+                return "type_id"
+            return "id"
+        if tname in ["CONST_DECIMAL", "CONST_OCTAL", "CONST_HEX"]:
+            return "int_lit"
+        if tname == "CONST_FLOAT":
+            return "float_lit"
+        if tname == "CONST_CHAR":
+            return "char_lit"
+        if tname == "STRING_LITERAL":
+            return "string_lit"
 
-            ('Ptr', '*'): ['*', 'Ptr'],
-            ('Ptr', 'OPERATOR'): ['*', 'Ptr'],  # 兼容 * 被识别为 OPERATOR 的情况
-            ('Ptr', 'IDENTIFIER'): ['epsilon'],
-
-            # --- 声明后缀 (核心修复点：添加 OPERATOR 映射) ---
-            ('DeclSuffix', '('): ['(', 'Params', ')', 'Block'],
-            ('DeclSuffix', ';'): [';'],
-            ('DeclSuffix', '='): ['=', 'Initializer', 'NextDecl'],
-            ('DeclSuffix', 'OPERATOR'): ['=', 'Initializer', 'NextDecl'],  # 修复：int a = 0; 匹配 OPERATOR
-            ('DeclSuffix', '['): ['[', 'CONST_DECIMAL', ']', 'OptInitSemicolon'],
-            ('DeclSuffix', ','): [',', 'IDENTIFIER', 'DeclSuffix'],
-
-            ('NextDecl', ';'): [';'],
-            ('NextDecl', ','): [',', 'IDENTIFIER', 'DeclSuffix'],
-
-            ('OptInitSemicolon', ';'): [';'],
-            ('OptInitSemicolon', '='): ['=', 'Initializer', ';'],
-            ('OptInitSemicolon', 'OPERATOR'): ['=', 'Initializer', ';'],  # 修复：数组初始化
-
-            # --- 初始化 ---
-            ('Initializer', '{'): ['{', 'InitList', '}'],
-            ('Initializer', 'IDENTIFIER'): ['Expr'],
-            ('Initializer', 'CONST_DECIMAL'): ['Expr'],
-            ('Initializer', 'CONST_OCTAL'): ['Expr'],
-            ('Initializer', 'CONST_FLOAT'): ['Expr'],
-            ('Initializer', 'STRING_LITERAL'): ['Expr'],
-            ('Initializer', 'OPERATOR'): ['Expr'],  # 负数
-            ('Initializer', '*'): ['Expr'],
-
-            ('InitList', 'IDENTIFIER'): ['Initializer', 'NextInit'],
-            ('InitList', 'CONST_DECIMAL'): ['Initializer', 'NextInit'],
-            ('InitList', 'CONST_OCTAL'): ['Initializer', 'NextInit'],
-            ('InitList', 'CONST_FLOAT'): ['Initializer', 'NextInit'],
-            ('InitList', 'STRING_LITERAL'): ['Initializer', 'NextInit'],
-            ('InitList', '{'): ['Initializer', 'NextInit'],
-            ('InitList', 'OPERATOR'): ['Initializer', 'NextInit'],
-            ('InitList', '*'): ['Initializer', 'NextInit'],
-
-            ('NextInit', ','): [',', 'InitList'],
-            ('NextInit', '}'): ['epsilon'],
-
-            # --- 语句 ---
-            ('Block', '{'): ['{', 'StmtList', '}'],
-            ('StmtList', 'KEYWORD'): ['Stmt', 'StmtList'],
-            ('StmtList', 'IDENTIFIER'): ['Stmt', 'StmtList'],
-            ('StmtList', 'for'): ['Stmt', 'StmtList'],
-            ('StmtList', 'if'): ['Stmt', 'StmtList'],
-            ('StmtList', '}'): ['epsilon'],
-
-            ('Stmt', 'KEYWORD'): ['Decl'],
-            ('Stmt', 'for'): ['ForStmt'],
-            ('Stmt', 'if'): ['IfStmt'],
-            ('Stmt', '{'): ['Block'],
-            ('Stmt', 'IDENTIFIER'): ['DeclOrAssign'],
-
-            # --- If/For ---
-            ('IfStmt', 'if'): ['if', '(', 'Expr', ')', 'Stmt', 'ElsePart'],
-            ('ElsePart', 'else'): ['else', 'Stmt'],
-            ('ElsePart', ';'): ['epsilon'],
-            ('ElsePart', '}'): ['epsilon'],
-            ('ElsePart', 'KEYWORD'): ['epsilon'],
-            ('ElsePart', 'IDENTIFIER'): ['epsilon'],
-            ('ElsePart', 'for'): ['epsilon'],
-            ('ElsePart', 'if'): ['epsilon'],
-            ('ElsePart', 'EOF'): ['epsilon'],
-
-            ('ForStmt', 'for'): ['for', '(', 'ForInit', 'Expr', ';', 'ForStep', ')', 'Stmt'],
-            ('ForInit', 'KEYWORD'): ['Decl'],
-            ('ForInit', 'IDENTIFIER'): ['SimpleStmt', ';'],
-            ('ForStep', 'IDENTIFIER'): ['IDENTIFIER', 'StepSuffix'],
-            ('StepSuffix', 'OPERATOR'): ['OPERATOR', 'ExprOpt'],
-            ('ExprOpt', 'IDENTIFIER'): ['Expr'],
-            ('ExprOpt', 'CONST_DECIMAL'): ['Expr'],
-            ('ExprOpt', ')'): ['epsilon'],
-
-            # --- 语句操作 ---
-            ('SimpleStmt', 'IDENTIFIER'): ['IDENTIFIER', 'AssignOrCall'],
-            ('AssignOrCall', 'OPERATOR'): ['AssignOp', 'Expr'],
-            ('AssignOrCall', '('): ['(', 'Args', ')'],
-            ('AssignOrCall', '.'): ['.', 'IDENTIFIER', 'AssignOrCall'],
-            ('AssignOrCall', '['): ['[', 'Expr', ']', 'AssignOrCall'],
-
-            ('AssignOp', 'OPERATOR'): ['OPERATOR'],
-
-            # --- 表达式 (右递归链式处理) ---
-            ('Expr', 'IDENTIFIER'): ['Term', 'E_Prime'],
-            ('Expr', 'CONST_DECIMAL'): ['Term', 'E_Prime'],
-            ('Expr', 'CONST_OCTAL'): ['Term', 'E_Prime'],
-            ('Expr', 'CONST_FLOAT'): ['Term', 'E_Prime'],
-            ('Expr', 'STRING_LITERAL'): ['Term', 'E_Prime'],
-            ('Expr', 'OPERATOR'): ['Term', 'E_Prime'],
-            ('Expr', '*'): ['Term', 'E_Prime'],
-
-            ('E_Prime', 'OPERATOR'): ['OPERATOR', 'Term', 'E_Prime'],
-            ('E_Prime', '*'): ['OPERATOR', 'Term', 'E_Prime'],
-            ('E_Prime', ';'): ['epsilon'],
-            ('E_Prime', ')'): ['epsilon'],
-            ('E_Prime', ']'): ['epsilon'],
-            ('E_Prime', ','): ['epsilon'],
-            ('E_Prime', '}'): ['epsilon'],
-
-            # Term
-            ('Term', 'IDENTIFIER'): ['IDENTIFIER', 'TermSuffix'],
-            ('Term', 'CONST_DECIMAL'): ['CONST_DECIMAL'],
-            ('Term', 'CONST_OCTAL'): ['CONST_OCTAL'],
-            ('Term', 'CONST_FLOAT'): ['CONST_FLOAT'],
-            ('Term', 'STRING_LITERAL'): ['STRING_LITERAL'],
-            ('Term', 'OPERATOR'): ['OPERATOR', 'Term'],
-            ('Term', '*'): ['OPERATOR', 'Term'],
-
-            ('TermSuffix', '['): ['[', 'Expr', ']', 'TermSuffix'],
-            ('TermSuffix', '.'): ['.', 'IDENTIFIER', 'TermSuffix'],
-            ('TermSuffix', 'OPERATOR'): ['epsilon'],
-            ('TermSuffix', '*'): ['epsilon'],
-            ('TermSuffix', ';'): ['epsilon'],
-            ('TermSuffix', ')'): ['epsilon'],
-            ('TermSuffix', ','): ['epsilon'],
-            ('TermSuffix', ']'): ['epsilon'],
-
-            ('Params', ')'): ['epsilon'],
-            ('Args', 'IDENTIFIER'): ['Expr', 'NextArg'],
-            ('Args', 'CONST_DECIMAL'): ['Expr', 'NextArg'],
-            ('Args', 'STRING_LITERAL'): ['Expr', 'NextArg'],
-            ('Args', ')'): ['epsilon'],
-            ('NextArg', ','): [',', 'Args'],
-            ('NextArg', ')'): ['epsilon']
-        }
+        return tname
 
     def analyze(self, tokens):
-        filtered = [t for t in tokens if t.type != 89]
-        stack = ['EOF', 'S']
+        filtered = [t for t in tokens if TYPES.get(t.type) != "PREPROCESSOR"]
+
+        stack: List[str] = ["EOF", self.grammar.start]
         ptr = 0
         records = []
-        step_count = 0
+        step = 0
 
-        while len(stack) > 0:
+        def rest_input_str(i: int) -> str:
+            if i >= len(filtered):
+                return "#"
+            return "".join([t.attribute for t in filtered[i:]]) + "#"
+
+        while stack:
             top = stack[-1]
             stack_str = " ".join(stack).replace("EOF", "#")
-            input_str = "".join([t.attribute for t in filtered[ptr:]]) + "#" if ptr < len(filtered) else "#"
+            input_str = rest_input_str(ptr)
 
             if ptr < len(filtered):
-                curr_t = filtered[ptr]
-                curr_type = TYPES.get(curr_t.type, 'UNKNOWN')
-                if curr_t.type == -1: curr_type = 'EOF'
-
-                # --- 核心逻辑 ---
-                # 显式包含 '*' 以支持指针
-                # 即使 '=' 没在这里，它会被识别为 OPERATOR，然后命中 DeclSuffix 的 OPERATOR 规则
-                if curr_t.attribute in [';', '{', '}', '(', ')', '[', ']', ',', '.', 'for', 'struct', 'if', 'else',
-                                        '*']:
-                    lookahead = curr_t.attribute
-                else:
-                    lookahead = curr_type
-                attr = curr_t.attribute
+                curr = filtered[ptr]
+                lookahead = self.symbolize(curr)
+                attr = curr.attribute
+                line = curr.line
             else:
-                lookahead = 'EOF'
-                attr = 'EOF'
+                lookahead = "EOF"
+                attr = "EOF"
+                line = -1
 
-            # --- 运行时消歧 ---
-            if top == 'DeclOrAssign' and ptr + 1 < len(filtered):
-                next_t = filtered[ptr + 1]
-                if TYPES.get(next_t.type) == 'IDENTIFIER' or next_t.attribute == '*':
-                    lookahead = 'IDENTIFIER'
-                    self.table[('DeclOrAssign', 'IDENTIFIER')] = ['Decl']
-                else:
-                    stack.pop()
-                    stack.append(';')
-                    stack.append('SimpleStmt')
-                    records.append((step_count, stack_str, input_str, "DeclOrAssign -> SimpleStmt", "预读判定: 语句"))
-                    step_count += 1
-                    continue
-
-            # --- 匹配逻辑 ---
-            match_keyword = (top == 'KEYWORD' and lookahead == 'KEYWORD')
-
-            if top in self.terminals or top in [';', '{', '}', '(', ')', '[', ']', ',', '.', 'for', 'struct', 'if',
-                                                'else', 'EOF', '*', '=']:
-                if top == lookahead or top == attr or match_keyword:
-                    records.append((step_count, stack_str, input_str, "", f"“{attr}” 匹配"))
+            if top in self.terminals or top == "EOF":
+                if top == lookahead:
+                    if top == "id" and self._capture_typedef_alias:
+                        self.typedef_names.add(attr)
+                        self._capture_typedef_alias = False
+                    records.append((step, stack_str, input_str, "", f"“{attr}” 匹配"))
                     stack.pop()
                     ptr += 1
-                    if top == 'EOF': break
+                    if top == "EOF":
+                        break
                 else:
-                    return records, False, f"匹配失败：期望 {top} 但看到 {attr} (行 {filtered[ptr].line})"
+                    return records, False, f"匹配失败：期望 {top} 但看到 {attr} (行 {line})"
             else:
-                if (top, lookahead) in self.table:
-                    prod = self.table[(top, lookahead)]
-                    prod_str = f"{top} -> {' '.join(prod)}" if prod != ['epsilon'] else f"{top} -> ε"
-                    action_str = f"{top} 弹栈, {' '.join(prod)} 逆序压栈" if prod != [
-                        'epsilon'] else f"{top} 弹栈 (空推导)"
-                    records.append((step_count, stack_str, input_str, prod_str, action_str))
-                    stack.pop()
-                    if prod != ['epsilon']:
-                        for s in reversed(prod):
-                            stack.append(s)
-                else:
-                    return records, False, f"文法错误：无法用 {top} 匹配 {attr} (行 {filtered[ptr].line})"
-            step_count += 1
+                key = (top, lookahead)
+                if key not in self.table:
+                    return records, False, f"文法错误：无法用 {top} 匹配 {attr} (行 {line})"
+
+                prod = self.table[key]
+                if top == "TypeAlias" and prod == ["id"]:
+                    self._capture_typedef_alias = True
+
+                prod_str = f"{top} -> {' '.join(prod)}" if prod != [EPS] else f"{top} -> ε"
+                action_str = f"{top} 弹栈, {' '.join(prod)} 逆序压栈" if prod != [EPS] else f"{top} 弹栈 (空推导)"
+                records.append((step, stack_str, input_str, prod_str, action_str))
+
+                stack.pop()
+                if prod != [EPS]:
+                    for s in reversed(prod):
+                        stack.append(s)
+
+            step += 1
 
         return records, True, "语法分析成功！"
+
+    def calc_sets(self):
+        return {"first": self.first, "follow": self.follow, "select": self.select}
