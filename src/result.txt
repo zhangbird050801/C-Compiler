@@ -1,0 +1,583 @@
+TOKENS:
+   1 PREPROCESSOR    #include <stdio.h>   L1
+   2 PREPROCESSOR    #include <string.h>  L2
+   3 KEYWORD         typedef              L4
+   4 KEYWORD         struct               L4
+   5 IDENTIFIER      Books                L4
+   6 DELIMITER       {                    L5
+   7 KEYWORD         char                 L6
+   8 IDENTIFIER      title                L6
+   9 DELIMITER       [                    L6
+  10 CONST_DECIMAL   50                   L6
+  11 DELIMITER       ]                    L6
+  12 DELIMITER       ;                    L6
+  13 KEYWORD         char                 L7
+  14 IDENTIFIER      author               L7
+  15 DELIMITER       [                    L7
+  16 CONST_DECIMAL   50                   L7
+  17 DELIMITER       ]                    L7
+  18 DELIMITER       ;                    L7
+  19 KEYWORD         char                 L8
+  20 IDENTIFIER      version              L8
+  21 DELIMITER       [                    L8
+  22 CONST_DECIMAL   50                   L8
+  23 DELIMITER       ]                    L8
+  24 DELIMITER       ;                    L8
+  25 KEYWORD         int                  L9
+  26 IDENTIFIER      book_id              L9
+  27 DELIMITER       ;                    L9
+  28 KEYWORD         float                L10
+  29 IDENTIFIER      price_and_discount   L10
+  30 DELIMITER       [                    L10
+  31 CONST_DECIMAL   2                    L10
+  32 DELIMITER       ]                    L10
+  33 DELIMITER       ;                    L10
+  34 DELIMITER       }                    L11
+  35 IDENTIFIER      Book                 L11
+  36 DELIMITER       ;                    L11
+  37 KEYWORD         int                  L13
+  38 IDENTIFIER      main                 L13
+  39 DELIMITER       (                    L13
+  40 DELIMITER       )                    L13
+  41 DELIMITER       {                    L14
+  42 IDENTIFIER      Book                 L15
+  43 IDENTIFIER      book                 L15
+  44 OPERATOR        =                    L15
+  45 DELIMITER       {                    L15
+  46 STRING_LITERAL  Compilers: Principles, Techniques, and Tools L15
+  47 DELIMITER       ,                    L15
+  48 STRING_LITERAL  Alfred V. Aho et al. L15
+  49 DELIMITER       ,                    L15
+  50 STRING_LITERAL   2nd                 L15
+  51 DELIMITER       ,                    L15
+  52 CONST_DECIMAL   13                   L15
+  53 DELIMITER       ,                    L15
+  54 DELIMITER       {                    L15
+  55 CONST_DECIMAL   100                  L15
+  56 DELIMITER       ,                    L15
+  57 CONST_FLOAT     0.8                  L15
+  58 DELIMITER       }                    L15
+  59 DELIMITER       }                    L15
+  60 DELIMITER       ;                    L15
+  61 KEYWORD         float                L17
+  62 IDENTIFIER      discount_price       L17
+  63 OPERATOR        =                    L17
+  64 IDENTIFIER      book                 L17
+  65 OPERATOR        .                    L17
+  66 IDENTIFIER      price_and_discount   L17
+  67 DELIMITER       [                    L17
+  68 CONST_OCTAL     0                    L17
+  69 DELIMITER       ]                    L17
+  70 OPERATOR        *                    L17
+  71 IDENTIFIER      book                 L17
+  72 OPERATOR        .                    L17
+  73 IDENTIFIER      price_and_discount   L17
+  74 DELIMITER       [                    L17
+  75 CONST_DECIMAL   1                    L17
+  76 DELIMITER       ]                    L17
+  77 DELIMITER       ;                    L17
+  78 IDENTIFIER      printf               L19
+  79 DELIMITER       (                    L19
+  80 STRING_LITERAL  Price of book %s is: %.2f\n L19
+  81 DELIMITER       ,                    L19
+  82 IDENTIFIER      strcat               L19
+  83 DELIMITER       (                    L19
+  84 IDENTIFIER      book                 L19
+  85 OPERATOR        .                    L19
+  86 IDENTIFIER      title                L19
+  87 DELIMITER       ,                    L19
+  88 IDENTIFIER      book                 L19
+  89 OPERATOR        .                    L19
+  90 IDENTIFIER      version              L19
+  91 DELIMITER       )                    L19
+  92 DELIMITER       ,                    L19
+  93 IDENTIFIER      discount_price       L19
+  94 DELIMITER       )                    L19
+  95 DELIMITER       ;                    L19
+  96 DELIMITER       }                    L20
+  97 EOF             EOF                  L20
+
+PARSE STEPS:
+   0 | # 程序                                     | typedef struct Books { char title [ 50 ] ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 程序 -> 声明 程序          | 程序 弹栈, 声明 程序 逆序压栈
+   1 | # 程序 声明                                  | typedef struct Books { char title [ 50 ] ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 声明 -> 类型别名声明         | 声明 弹栈, 类型别名声明 逆序压栈
+   2 | # 程序 类型别名声明                              | typedef struct Books { char title [ 50 ] ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 类型别名声明 -> typedef typedef右部 ; | 类型别名声明 弹栈, typedef typedef右部 ; 逆序压栈
+   3 | # 程序 ; typedef右部 typedef                 | typedef struct Books { char title [ 50 ] ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “typedef” 匹配
+   4 | # 程序 ; typedef右部                         | struct Books { char title [ 50 ] ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | typedef右部 -> typedef结构体 | typedef右部 弹栈, typedef结构体 逆序压栈
+   5 | # 程序 ; typedef结构体                        | struct Books { char title [ 50 ] ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | typedef结构体 -> struct typedef结构体头 | typedef结构体 弹栈, struct typedef结构体头 逆序压栈
+   6 | # 程序 ; typedef结构体头 struct                | struct Books { char title [ 50 ] ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “struct” 匹配
+   7 | # 程序 ; typedef结构体头                       | Books { char title [ 50 ] ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | typedef结构体头 -> id typedef结构体尾 | typedef结构体头 弹栈, id typedef结构体尾 逆序压栈
+   8 | # 程序 ; typedef结构体尾 id                    | Books { char title [ 50 ] ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “Books” 匹配
+   9 | # 程序 ; typedef结构体尾                       | { char title [ 50 ] ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | typedef结构体尾 -> { 成员列表 } 类型别名 | typedef结构体尾 弹栈, { 成员列表 } 类型别名 逆序压栈
+  10 | # 程序 ; 类型别名 } 成员列表 {                     | { char title [ 50 ] ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “{” 匹配
+  11 | # 程序 ; 类型别名 } 成员列表                       | char title [ 50 ] ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 成员列表 -> 成员 成员列表      | 成员列表 弹栈, 成员 成员列表 逆序压栈
+  12 | # 程序 ; 类型别名 } 成员列表 成员                    | char title [ 50 ] ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 成员 -> 成员类型 id 变量后缀 ; | 成员 弹栈, 成员类型 id 变量后缀 ; 逆序压栈
+  13 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 成员类型        | char title [ 50 ] ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 成员类型 -> 类型           | 成员类型 弹栈, 类型 逆序压栈
+  14 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 类型          | char title [ 50 ] ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 类型 -> 基础类型 指针        | 类型 弹栈, 基础类型 指针 逆序压栈
+  15 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 指针 基础类型     | char title [ 50 ] ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 基础类型 -> char         | 基础类型 弹栈, char 逆序压栈
+  16 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 指针 char     | char title [ 50 ] ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “char” 匹配
+  17 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 指针          | title [ 50 ] ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 指针 -> ε              | 指针 弹栈 (空推导)
+  18 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id             | title [ 50 ] ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “title” 匹配
+  19 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀                | [ 50 ] ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 变量后缀 -> [ int_lit ]  | 变量后缀 弹栈, [ int_lit ] 逆序压栈
+  20 | # 程序 ; 类型别名 } 成员列表 ; ] int_lit [         | [ 50 ] ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “[” 匹配
+  21 | # 程序 ; 类型别名 } 成员列表 ; ] int_lit           | 50 ] ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “50” 匹配
+  22 | # 程序 ; 类型别名 } 成员列表 ; ]                   | ] ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “]” 匹配
+  23 | # 程序 ; 类型别名 } 成员列表 ;                     | ; char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “;” 匹配
+  24 | # 程序 ; 类型别名 } 成员列表                       | char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 成员列表 -> 成员 成员列表      | 成员列表 弹栈, 成员 成员列表 逆序压栈
+  25 | # 程序 ; 类型别名 } 成员列表 成员                    | char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 成员 -> 成员类型 id 变量后缀 ; | 成员 弹栈, 成员类型 id 变量后缀 ; 逆序压栈
+  26 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 成员类型        | char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 成员类型 -> 类型           | 成员类型 弹栈, 类型 逆序压栈
+  27 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 类型          | char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 类型 -> 基础类型 指针        | 类型 弹栈, 基础类型 指针 逆序压栈
+  28 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 指针 基础类型     | char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 基础类型 -> char         | 基础类型 弹栈, char 逆序压栈
+  29 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 指针 char     | char author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “char” 匹配
+  30 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 指针          | author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 指针 -> ε              | 指针 弹栈 (空推导)
+  31 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id             | author [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “author” 匹配
+  32 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀                | [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 变量后缀 -> [ int_lit ]  | 变量后缀 弹栈, [ int_lit ] 逆序压栈
+  33 | # 程序 ; 类型别名 } 成员列表 ; ] int_lit [         | [ 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “[” 匹配
+  34 | # 程序 ; 类型别名 } 成员列表 ; ] int_lit           | 50 ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “50” 匹配
+  35 | # 程序 ; 类型别名 } 成员列表 ; ]                   | ] ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “]” 匹配
+  36 | # 程序 ; 类型别名 } 成员列表 ;                     | ; char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “;” 匹配
+  37 | # 程序 ; 类型别名 } 成员列表                       | char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 成员列表 -> 成员 成员列表      | 成员列表 弹栈, 成员 成员列表 逆序压栈
+  38 | # 程序 ; 类型别名 } 成员列表 成员                    | char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 成员 -> 成员类型 id 变量后缀 ; | 成员 弹栈, 成员类型 id 变量后缀 ; 逆序压栈
+  39 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 成员类型        | char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 成员类型 -> 类型           | 成员类型 弹栈, 类型 逆序压栈
+  40 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 类型          | char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 类型 -> 基础类型 指针        | 类型 弹栈, 基础类型 指针 逆序压栈
+  41 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 指针 基础类型     | char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 基础类型 -> char         | 基础类型 弹栈, char 逆序压栈
+  42 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 指针 char     | char version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “char” 匹配
+  43 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 指针          | version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 指针 -> ε              | 指针 弹栈 (空推导)
+  44 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id             | version [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “version” 匹配
+  45 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀                | [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 变量后缀 -> [ int_lit ]  | 变量后缀 弹栈, [ int_lit ] 逆序压栈
+  46 | # 程序 ; 类型别名 } 成员列表 ; ] int_lit [         | [ 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “[” 匹配
+  47 | # 程序 ; 类型别名 } 成员列表 ; ] int_lit           | 50 ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “50” 匹配
+  48 | # 程序 ; 类型别名 } 成员列表 ; ]                   | ] ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “]” 匹配
+  49 | # 程序 ; 类型别名 } 成员列表 ;                     | ; int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “;” 匹配
+  50 | # 程序 ; 类型别名 } 成员列表                       | int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 成员列表 -> 成员 成员列表      | 成员列表 弹栈, 成员 成员列表 逆序压栈
+  51 | # 程序 ; 类型别名 } 成员列表 成员                    | int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 成员 -> 成员类型 id 变量后缀 ; | 成员 弹栈, 成员类型 id 变量后缀 ; 逆序压栈
+  52 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 成员类型        | int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 成员类型 ->  类型           | 成员类型 弹栈, 类型 逆序压栈
+  53 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 类型          | int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 类型 -> 基础类 型 指针        | 类型 弹栈, 基础类型 指针 逆序压栈
+  54 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 指针 基础类型     | int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 基础类型 -> int          | 基础类型 弹栈, int 逆序压栈
+  55 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 指针 int      | int book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “int” 匹配
+  56 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 指针          | book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 指针 -> ε              | 指针 弹栈 (空推导)
+  57 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id             | book_id ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “book_id” 匹配
+  58 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀                | ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 变量后缀 -> ε            | 变量后缀 弹栈 (空推导)
+  59 | # 程序 ; 类型别名 } 成员列表 ;                     | ; float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “;” 匹配
+  60 | # 程序 ; 类型别名 } 成员列表                       | float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 成员列表 -> 成员 成员列表      | 成员列表 弹栈, 成员 成员列表 逆序压栈
+  61 | # 程序 ; 类型别名 } 成员列表 成员                    | float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 成员 -> 成员类型 id 变量后缀 ; | 成员 弹栈, 成员类型 id 变量后缀 ; 逆序压栈
+  62 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 成员类型        | float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 成员类型 -> 类型           | 成员类型 弹栈, 类型 逆序压栈
+  63 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 类型          | float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 类型 -> 基础类型 指针        | 类型 弹栈, 基础类型 指针 逆序压栈
+  64 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 指针 基础类型     | float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 基础类型 -> float        | 基础类型 弹栈, float 逆序压栈
+  65 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 指针 float    | float price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “float” 匹配
+  66 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id 指针          | price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 指针 -> ε              | 指针 弹栈 (空推导)
+  67 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀 id             | price_and_discount [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “price_and_discount” 匹配
+  68 | # 程序 ; 类型别名 } 成员列表 ; 变量后缀                | [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 变量后缀 -> [ int_lit ]  | 变量后缀 弹栈, [ int_lit ] 逆序压栈
+  69 | # 程序 ; 类型别名 } 成员列表 ; ] int_lit [         | [ 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “[” 匹配
+  70 | # 程序 ; 类型别名 } 成员列表 ; ] int_lit           | 2 ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “2” 匹配
+  71 | # 程序 ; 类型别名 } 成员列表 ; ]                   | ] ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “]” 匹配
+  72 | # 程序 ; 类型别名 } 成员列表 ;                     | ; } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “;” 匹配
+  73 | # 程序 ; 类型别名 } 成员列表                       | } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 成员列表 -> ε            | 成员列表 弹栈 (空推导)
+  74 | # 程序 ; 类型别名 }                            | } Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “}” 匹配
+  75 | # 程序 ; 类型别名                              | Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 类型别名 -> id           | 类型别名 弹栈, id 逆序压栈
+  76 | # 程序 ; id                                | Book ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “Book” 匹配
+  77 | # 程序 ;                                   | ; int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “;” 匹配
+  78 | # 程序                                     | int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 程序 -> 声明 程序          | 程序 弹栈, 声明 程序 逆序压栈
+  79 | # 程序 声明                                  | int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 声明 -> NonStructDecl  | 声明 弹栈, NonStructDecl 逆序压栈
+  80 | # 程序 NonStructDecl                       | int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | NonStructDecl -> 类型 id 声明后缀 | NonStructDecl 弹栈, 类型 id 声明后缀 逆序压栈
+  81 | # 程序 声明后缀 id 类型                          | int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 类型 -> 基础类型 指针        | 类型 弹栈, 基础类型 指针 逆序压栈
+  82 | # 程序 声明后缀 id 指针 基础类型                     | int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 基础类型 -> int          | 基础类型 弹栈, int 逆序压栈
+  83 | # 程序 声明后缀 id 指针 int                      | int main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “int” 匹配
+  84 | # 程序 声明后缀 id 指针                          | main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 指针 -> ε              | 指针 弹栈 (空推导)
+  85 | # 程序 声明后缀 id                             | main ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “main” 匹配
+  86 | # 程序 声明后缀                                | ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 声明后缀 -> ( 形参列表 ) 语句块 | 声明后缀 弹栈, ( 形参列表 ) 语句块 逆序压栈
+  87 | # 程序 语句块 ) 形参列表 (                        | ( ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “(” 匹配
+  88 | # 程序 语句块 ) 形参列表                          | ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 形参列表 -> ε            | 形参列表 弹栈 (空推导)
+  89 | # 程序 语句块 )                               | ) { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “)” 匹配
+  90 | # 程序 语句块                                 | { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 语句块 -> { 语句序列 }      | 语句块 弹栈, { 语句序列 } 逆序压栈
+  91 | # 程序 } 语句序列 {                            | { Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “{” 匹配
+  92 | # 程序 } 语句序列                              | Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 语句序列 -> 语句 语句序列      | 语句序列 弹栈, 语句 语句序列 逆序压栈
+  93 | # 程序 } 语句序列 语句                           | Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 语句 -> 声明语句           | 语句 弹栈, 声明语句 逆序压栈
+  94 | # 程序 } 语句序列 声明语句                         | Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 声明语句 -> 声明           | 声明语句 弹栈, 声明 逆序压栈
+  95 | # 程序 } 语句序列 声明                           | Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 声明 -> NonStructDecl  | 声明 弹栈, NonStructDecl 逆序压栈
+  96 | # 程序 } 语句序列 NonStructDecl                | Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | NonStructDecl -> 类型 id 声明后缀 | NonStructDecl 弹栈, 类型 id 声明后缀 逆序压栈
+  97 | # 程序 } 语句序列 声明后缀 id 类型                   | Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 类型 -> type_id 指针     | 类型 弹栈, type_id 指针 逆序压栈
+  98 | # 程序 } 语句序列 声明后缀 id 指针 type_id           | Book book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “Book” 匹配
+  99 | # 程序 } 语句序列 声明后缀 id 指针                   | book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 指针 -> ε              | 指针 弹栈 (空推导)
+ 100 | # 程序 } 语句序列 声明后缀 id                      | book = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “book” 匹配
+ 101 | # 程序 } 语句序列 声明后缀                         | = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 声明后缀 -> 变量尾部         | 声明后缀 弹栈, 变量尾部 逆序压栈
+ 102 | # 程序 } 语句序列 变量尾部                         | = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 变量尾部 -> 变量后缀 可选初始化 后续声明 | 变量尾部 弹栈, 变量后缀 可选初始化 后续声明 逆序压栈
+ 103 | # 程序 } 语句序列 后续声明 可选初始化 变量后缀              | = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 变量后缀 -> ε            | 变量后缀 弹栈 (空推导)
+ 104 | # 程序 } 语句序列 后续声明 可选初始化                   | = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 可选初始化 -> = 初始化       | 可选初始化 弹栈, = 初始化 逆序压栈
+ 105 | # 程序 } 语句序列 后续声明 初始化 =                   | = { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “=” 匹配
+ 106 | # 程序 } 语句序列 后续声明 初始化                     | { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 初始化 -> { 初始化列表 }     | 初始化 弹栈, { 初始化列表 } 逆序压栈
+ 107 | # 程序 } 语句序列 后续声明 } 初始化列表 {               | { Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “{” 匹配
+ 108 | # 程序 } 语句序列 后续声明 } 初始化列表                 | Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 初始化列表 -> 初始化 后续初始化   | 初始化列表 弹栈, 初始化 后续初始化 逆序压栈
+ 109 | # 程序 } 语句序列 后续声明 } 后续初始化 初始化             | Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 初始化 -> 表达式           | 初始化 弹栈, 表达式 逆序压栈
+ 110 | # 程序 } 语句序列 后续声明 } 后续初始化 表达式             | Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 表达式 -> 项 表达式续        | 表达式 弹栈, 项 表达式续 逆序压栈
+ 111 | # 程序 } 语句序列 后续声明 } 后续初始化 表达式续 项          | Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 项 -> string_lit      | 项 弹栈, string_lit 逆序压栈
+ 112 | # 程序 } 语句序列 后续声明 } 后续初始化 表达式续 string_lit | Compilers: Principles, Techniques, and Tools , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “Compilers: Principles, Techniques, and Tools” 匹配
+ 113 | # 程序 } 语句序列 后续声明 } 后续初始化 表达式续            | , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 表达式续 -> ε            | 表达式续 弹栈 (空推导)
+ 114 | # 程序 } 语句序列 后续声明 } 后续初始化                 | , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 后续初始化 -> , 初始化列表     | 后续初始化 弹栈, , 初始化列表 逆序压栈
+ 115 | # 程序 } 语句序列 后续声明 } 初始化列表 ,               | , Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “,” 匹配
+ 116 | # 程序 } 语句序列 后续声明 } 初始化列表                 | Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 初始化列表 -> 初始化 后续初始化   | 初始化列表 弹栈, 初始化 后续初始化 逆序压栈
+ 117 | # 程序 } 语句序列 后续声明 } 后续初始化 初始化             | Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 初始化 -> 表达式           | 初始化 弹栈, 表达式 逆序压栈
+ 118 | # 程序 } 语句序列 后续声明 } 后续初始化 表达式             | Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 表达式 -> 项 表达式续        | 表达式 弹栈, 项 表达式续 逆序压栈
+ 119 | # 程序 } 语句序列 后续声明 } 后续初始化 表达式续 项          | Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 项 -> string_lit      | 项 弹栈, string_lit 逆序压栈
+ 120 | # 程序 } 语句序列 后续声明 } 后续初始化 表达式续 string_lit | Alfred V. Aho et al. ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “Alfred V. Aho et al.” 匹配
+ 121 | # 程序 } 语句序列 后续声明 } 后续初始化 表达式续            | ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 表达式续 -> ε            | 表达式续 弹栈 (空推导)
+ 122 | # 程序 } 语句序列 后续声明 } 后续初始化                 | ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 后续初始化 -> , 初始化列表     | 后续初始化 弹栈, , 初始化列表 逆序压栈
+ 123 | # 程序 } 语句序列 后续声明 } 初始化列表 ,               | ,  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “,” 匹配
+ 124 | # 程序 } 语句序列 后续声明 } 初始化列表                 |  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 初始化列表 ->  初始化 后续初始化   | 初始化列表 弹栈, 初始化 后续初始化 逆序压栈
+ 125 | # 程序 } 语句序列 后续声明 } 后续初始化 初始化             |  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 初始化 -> 表达式           | 初始化 弹栈, 表达式 逆序压栈
+ 126 | # 程序 } 语句序列 后续声明 } 后续初始化 表达式             |  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 表达式 -> 项 表达式续        | 表达式 弹栈, 项 表达式续 逆序压栈
+ 127 | # 程序 } 语句序列 后续声明 } 后续初始化 表达式续 项          |  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 项 -> string_lit      | 项 弹栈, string_lit 逆序压栈
+ 128 | # 程序 } 语句序列 后续声明 } 后续初始化 表达式续 string_lit |  2nd , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “ 2nd” 匹配
+ 129 | # 程序 } 语句序列 后续声明 } 后续初始化 表达式续            | , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 表达式续 -> ε            | 表达式续 弹栈 (空推导)
+ 130 | # 程序 } 语句序列 后续声明 } 后续初始化                 | , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 后续初始化 -> , 初始化列表     | 后续初始化 弹栈, , 初始化列表 逆序压栈
+ 131 | # 程序 } 语句序列 后续声明 } 初始化列表 ,               | , 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “,” 匹配
+ 132 | # 程序 } 语句序列 后续声明 } 初始化列表                 | 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 初始化列表 -> 初始化  后续初始化   | 初始化列表 弹栈, 初始化 后续初始化 逆序压栈
+ 133 | # 程序 } 语句序列 后续声明 } 后续初始化 初始化             | 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 初始化 -> 表达式           | 初始化 弹栈, 表达式 逆序压栈
+ 134 | # 程序 } 语句序列 后续声明 } 后续初始化 表达式             | 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 表达式 -> 项 表达式续        | 表达式 弹栈, 项 表达式续 逆序压栈
+ 135 | # 程序 } 语句序列 后续声明 } 后续初始化 表达式续 项          | 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 项 -> int_lit         | 项 弹栈, int_lit 逆序压栈
+ 136 | # 程序 } 语句序列 后续声明 } 后续初始化 表达式续 int_lit    | 13 , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “13” 匹配
+ 137 | # 程序 } 语句序列 后续声明 } 后续初始化 表达式续            | , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 表达式续 -> ε            | 表达式续 弹栈 (空推导)
+ 138 | # 程序 } 语句序列 后续声明 } 后续初始化                 | , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 后续初始化 -> , 初始化列 表     | 后续初始化 弹栈, , 初始化列表 逆序压栈
+ 139 | # 程序 } 语句序列 后续声明 } 初始化列表 ,               | , { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “,” 匹配
+ 140 | # 程序 } 语句序列 后续声明 } 初始化列表                 | { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 初始化列表 -> 初始化 后续初始化   | 初始化列表 弹栈, 初始化 后续初始化 逆序压栈
+ 141 | # 程序 } 语句序列 后续声明 } 后续初始化 初始化             | { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 初始化 -> { 初始化列表 }     | 初始化 弹栈, { 初始化列表 } 逆序压栈
+ 142 | # 程序 } 语句序列 后续声明 } 后续初始化 } 初始化列表 {       | { 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “{” 匹配
+ 143 | # 程序 } 语句序列 后续声明 } 后续初始化 } 初始化列表         | 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 初始化列表 -> 初始化 后 续初始化   | 初始化列表 弹栈, 初始化 后续初始化 逆序压栈
+ 144 | # 程序 } 语句序列 后续声明 } 后续初始化 } 后续初始化 初始化     | 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 初始化 -> 表达式           | 初始化 弹栈, 表达式 逆序压栈
+ 145 | # 程序 } 语句序列 后续声明 } 后续初始化 } 后续初始化 表达式     | 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 表达式 -> 项 表达式续        | 表达式 弹栈, 项 表达式续 逆序压栈
+ 146 | # 程序 } 语句序列 后续声明 } 后续初始化 } 后续初始化 表达式续 项  | 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 项 -> int_lit         | 项 弹栈, int_lit 逆序压栈
+ 147 | # 程序 } 语句序列 后续声明 } 后续初始化 } 后续初始化 表达式续 int_lit | 100 , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “100” 匹配
+ 148 | # 程序 } 语句序列 后续声明 } 后续初始化 } 后续初始化 表达式续    | , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 表达式续 -> ε            | 表达式续 弹栈 (空推导)
+ 149 | # 程序 } 语句序列 后续声明 } 后续初始化 } 后续初始化         | , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 后续初始化 -> , 初始化列表     | 后续初始化 弹栈, , 初始化列表 逆序压栈
+ 150 | # 程序 } 语句序列 后续声明 } 后续初始化 } 初始化列表 ,       | , 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “,”  匹配
+ 151 | # 程序 } 语句序列 后续声明 } 后续初始化 } 初始化列表         | 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 初始化列表 -> 初始化 后续初始 化   | 初始化列表 弹栈, 初始化 后续初始化 逆序压栈
+ 152 | # 程序 } 语句序列 后续声明 } 后续初始化 } 后续初始化 初始化     | 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 初始化 -> 表达式           | 初始化 弹栈, 表达式 逆序压栈
+ 153 | # 程序 } 语句序列 后续声明 } 后续初始化 } 后续初始化 表达式     | 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 表达式 -> 项 表达式续        | 表达式 弹栈, 项 表达式续 逆序压栈
+ 154 | # 程序 } 语句序列 后续声明 } 后续初始化 } 后续初始化 表达式续 项  | 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 项 -> float_lit       |  项 弹栈, float_lit 逆序压栈
+ 155 | # 程序 } 语句序列 后续声明 } 后续初始化 } 后续初始化 表达式续 float_lit | 0.8 } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “0.8” 匹配
+ 156 | # 程序 } 语句序列 后续声明 } 后续初始化 } 后续初始化 表达式续    | } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 表达式续 -> ε            | 表 达式续 弹栈 (空推导)
+ 157 | # 程序 } 语句序列 后续声明 } 后续初始化 } 后续初始化         | } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 后续初始化 -> ε           | 后续初始化 弹栈 (空推导)
+ 158 | # 程序 } 语句序列 后续声明 } 后续初始化 }               | } } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “}” 匹配
+ 159 | # 程序 } 语句序列 后续声明 } 后续初始化                 | } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 后续初始化 -> ε           | 后续初始化 弹栈 (空推导)
+ 160 | # 程序 } 语句序列 后续声明 }                       | } ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “}” 匹配
+ 161 | # 程序 } 语句序列 后续声明                         | ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 后续声明 -> ;            | 后续声明 弹栈, ; 逆序压栈
+ 162 | # 程序 } 语句序列 ;                            | ; float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “;” 匹配
+ 163 | # 程序 } 语句序列                              | float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 语句序列 -> 语句 语句序列      | 语句序列 弹栈, 语句  语句序列 逆序压栈
+ 164 | # 程序 } 语句序列 语句                           | float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 语句 -> 声明语句           | 语句 弹栈, 声明语句 逆 序压栈
+ 165 | # 程序 } 语句序列 声明语句                         | float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 声明语句 -> 声明           | 声明语句 弹栈, 声明  逆序压栈
+ 166 | # 程序 } 语句序列 声明                           | float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 声明 -> NonStructDecl  | 声明 弹栈, NonStructDecl 逆序压栈
+ 167 | # 程序 } 语句序列 NonStructDecl                | float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | NonStructDecl -> 类型 id 声明后缀 | NonStructDecl 弹栈, 类型 id 声明后缀 逆序压栈
+ 168 | # 程序 } 语句序列 声明后缀 id 类型                   | float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 类型 -> 基础类型 指针        | 类型 弹栈, 基础类型 指针 逆序压栈
+ 169 | # 程序 } 语句序列 声明后缀 id 指针 基础类型              | float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 基础类型 -> float        | 基础类型 弹栈, float 逆序压栈
+ 170 | # 程序 } 语句序列 声明后缀 id 指针 float             | float discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “float” 匹配
+ 171 | # 程序 } 语句序列 声明后缀 id 指针                   | discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 指针 -> ε              | 指针 弹栈 (空推导)
+ 172 | # 程序 } 语句序列 声明后缀 id                      | discount_price = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “discount_price” 匹配
+ 173 | # 程序 } 语句序列 声明后缀                         | = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 声明后缀 -> 变量尾部         | 声明后缀 弹栈, 变量尾部 逆序压栈
+ 174 | # 程序 } 语句序列 变量尾部                         | = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 变量尾部 -> 变量后缀 可选初始化 后续声明 | 变量尾部 弹栈, 变量后缀 可选初始化 后续声明 逆序压栈
+ 175 | # 程序 } 语句序列 后续声明 可选初始化 变量后缀              | = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 变量后缀 -> ε            | 变量后缀 弹栈 (空推导)
+ 176 | # 程序 } 语句序列 后续声明 可选初始化                   | = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 可选初始化 -> = 初始化       | 可选初始化 弹栈, = 初始化 逆序压栈
+ 177 | # 程序 } 语句序列 后续声明 初始化 =                   | = book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “=” 匹配
+ 178 | # 程序 } 语句序列 后续声明 初始化                     | book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 初始化 -> 表达式           | 初始化 弹栈, 表达式 逆序压栈
+ 179 | # 程序 } 语句序列 后续声明 表达式                     | book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 表达式 -> 项 表达式续        | 表达式 弹栈, 项 表达式续 逆序压栈
+ 180 | # 程序 } 语句序列 后续声明 表达式续 项                  | book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 项 -> id 项后缀          | 项 弹栈, id 项后缀 逆序压栈
+ 181 | # 程序 } 语句序列 后续声明 表达式续 项后缀 id             | book . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “book” 匹配
+ 182 | # 程序 } 语句序列 后续声明 表达式续 项后缀                | . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 项后缀 -> . id 项后缀      | 项后缀 弹栈, . id 项后缀 逆序压栈
+ 183 | # 程序 } 语句序列 后续声明 表达式续 项后缀 id .           | . price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “.” 匹配
+ 184 | # 程序 } 语句序列 后续声明 表达式续 项后缀 id             | price_and_discount [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “price_and_discount” 匹配
+ 185 | # 程序 } 语句序列 后续声明 表达式续 项后缀                | [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 项后缀 -> [ 表达式 ] 项后缀   | 项后缀 弹栈, [ 表达式 ] 项后缀 逆序压栈
+ 186 | # 程序 } 语句序列 后续声明 表达式续 项后缀 ] 表达式 [        | [ 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “[” 匹配
+ 187 | # 程序 } 语句序列 后续声明 表达式续 项后缀 ] 表达式          | 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 表达式 -> 项 表达式续        | 表达式 弹栈, 项 表达式续 逆序压栈
+ 188 | # 程序 } 语句序列 后续声明 表达式续 项后缀 ] 表达式续 项       | 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 项 -> int_lit         | 项 弹栈, int_lit 逆序压栈
+ 189 | # 程序 } 语句序列 后续声明 表达式续 项后缀 ] 表达式续 int_lit | 0 ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “0” 匹配
+ 190 | # 程序 } 语句序列 后续声明 表达式续 项后缀 ] 表达式续         | ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 表达式续 -> ε            | 表达式续 弹栈 (空推导)
+ 191 | # 程序 } 语句序列 后续声明 表达式续 项后缀 ]              | ] * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “]” 匹配
+ 192 | # 程序 } 语句序列 后续声明 表达式续 项后缀                | * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 项后缀 -> ε             | 项后缀 弹栈 (空推导)
+ 193 | # 程序 } 语句序列 后续声明 表达式续                    | * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 表达式续 -> OP 项 表达式续    | 表达式续 弹栈, OP 项 表达式续 逆序压栈
+ 194 | # 程序 } 语句序列 后续声明 表达式续 项 OP               | * book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “*” 匹配
+ 195 | # 程序 } 语句序列 后续声明 表达式续 项                  | book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 项 -> id 项后缀          | 项 弹栈, id 项后缀 逆序压栈
+ 196 | # 程序 } 语句序列 后续声明 表达式续 项后缀 id             | book . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “book” 匹配
+ 197 | # 程序 } 语句序列 后续声明 表达式续 项后缀                | . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 项后缀 -> . id 项后缀      | 项后缀 弹栈, . id 项后缀 逆序压栈
+ 198 | # 程序 } 语句序列 后续声明 表达式续 项后缀 id .           | . price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “.” 匹配
+ 199 | # 程序 } 语句序列 后续声明 表达式续 项后缀 id             | price_and_discount [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “price_and_discount” 匹配
+ 200 | # 程序 } 语句序列 后续声明 表达式续 项后缀                | [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 项后缀 -> [ 表达式 ] 项后缀   | 项后缀 弹栈, [ 表达式 ] 项后缀 逆序压栈
+ 201 | # 程序 } 语句序列 后续声明 表达式续 项后缀 ] 表达式 [        | [ 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “[” 匹配
+ 202 | # 程序 } 语句序列 后续声明 表达式续 项后缀 ] 表达式          | 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 表达式 -> 项 表达式续        | 表达式 弹栈, 项 表达式续 逆序压栈
+ 203 | # 程序 } 语句序列 后续声明 表达式续 项后缀 ] 表达式续 项       | 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 项 -> int_lit         | 项 弹栈, int_lit 逆序压栈
+ 204 | # 程序 } 语句序列 后续声明 表达式续 项后缀 ] 表达式续 int_lit | 1 ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “1” 匹配
+ 205 | # 程序 } 语句序列 后续声明 表达式续 项后缀 ] 表达式续         | ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 表达式续 -> ε            | 表达式续 弹栈 (空推导)
+ 206 | # 程序 } 语句序列 后续声明 表达式续 项后缀 ]              | ] ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “]” 匹配
+ 207 | # 程序 } 语句序列 后续声明 表达式续 项后缀                | ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 项后缀 -> ε             | 项后缀 弹栈 (空推导)
+ 208 | # 程序 } 语句序列 后续声明 表达式续                    | ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 表达式续 -> ε            | 表达式续 弹栈 (空推导)
+ 209 | # 程序 } 语句序列 后续声明                         | ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 后续声明 -> ;            | 后续声明 弹栈, ; 逆序压栈
+ 210 | # 程序 } 语句序列 ;                            | ; printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “;” 匹配
+ 211 | # 程序 } 语句序列                              | printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 语句序列 -> 语句 语句序列      | 语句序列 弹栈, 语句 语句序列 逆序压栈
+ 212 | # 程序 } 语句序列 语句                           | printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 语句 -> 简单语句 ;         | 语句 弹栈, 简单语句 ; 逆序压栈
+ 213 | # 程序 } 语句序列 ; 简单语句                       | printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 简单语句 -> id 赋值或调用     | 简单语句 弹栈, id 赋值或调用 逆序压栈
+ 214 | # 程序 } 语句序列 ; 赋值或调用 id                   | printf ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “printf” 匹配
+ 215 | # 程序 } 语句序列 ; 赋值或调用                      | ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 赋值或调用 -> ( 实参列表 )    | 赋值或调用 弹栈, ( 实参列表 ) 逆序压栈
+ 216 | # 程序 } 语句序列 ; ) 实参列表 (                   | ( Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “(” 匹配
+ 217 | # 程序 } 语句序列 ; ) 实参列表                     | Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 实参列表 -> 表达式 后续实参     | 实参列表 弹栈, 表达式 后续实参 逆序压栈
+ 218 | # 程序 } 语句序列 ; ) 后续实参 表达式                 | Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 表达式 -> 项 表达式续        | 表达式 弹栈, 项 表达式续 逆序压栈
+ 219 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项              | Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 项 -> string_lit      | 项 弹栈, string_lit 逆序压栈
+ 220 | # 程序 } 语句序列 ; ) 后续实参 表达式续 string_lit     | Price of book %s is: %.2f\n , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “Price of book %s is: %.2f\n” 匹配
+ 221 | # 程序 } 语句序列 ; ) 后续实参 表达式续                | , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 表达式续 -> ε            | 表达式续 弹栈 (空推导)
+ 222 | # 程序 } 语句序列 ; ) 后续实参                     | , strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 后续实参 -> , 实参列表       | 后续实参 弹栈, , 实参列表 逆序压栈
+ 223 | # 程序 } 语句序列 ; ) 实参列表 ,                   | , strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “,” 匹配
+ 224 | # 程序 } 语句序列 ; ) 实参列表                     | strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 实参列表 -> 表达式 后续 实参     | 实参列表 弹栈, 表达式 后续实参 逆序压栈
+ 225 | # 程序 } 语句序列 ; ) 后续实参 表达式                 | strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 表达式 -> 项 表达式续        | 表达式 弹栈, 项 表达式续 逆序压栈
+ 226 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项              | strcat ( book . title , book . version ) , discount_price ) ; } EOF # | 项 -> id 项后缀          | 项 弹栈, id 项后缀 逆序压栈
+ 227 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 id         | strcat ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “strcat” 匹配
+ 228 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀            | ( book . title , book . version ) , discount_price ) ; } EOF # | 项后缀 -> ( 实参列表 )  项后缀  | 项后缀 弹栈, ( 实参列表 ) 项后缀 逆序压栈
+ 229 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 ) 实参列表 (   | ( book . title , book . version ) , discount_price ) ; } EOF # |                      | “(” 匹配
+ 230 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 ) 实参列表     | book . title , book . version ) , discount_price ) ; } EOF # | 实参列表 -> 表达式 后 续实参     | 实参列表 弹栈, 表达式 后续实参 逆序压栈
+ 231 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 ) 后续实参 表达式 | book . title , book . version ) , discount_price ) ; } EOF # | 表达式 -> 项 表达式续        | 表达式 弹栈, 项 表达式续 逆序压栈
+ 232 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 ) 后续实参 表达式续 项 | book . title , book . version ) , discount_price ) ; } EOF # | 项 -> id 项后 缀          | 项 弹栈, id 项后缀 逆序压栈
+ 233 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 ) 后续实参 表达式续 项后缀 id | book . title , book . version ) , discount_price ) ; } EOF # |                      | “book” 匹配
+ 234 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 ) 后续实参 表达式续 项后缀 | . title , book . version ) , discount_price ) ; } EOF # | 项后缀 -> . id 项后缀      | 项后缀 弹栈, . id 项后缀 逆序压栈
+ 235 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 ) 后续实参 表达式续 项后缀 id . | . title , book . version ) , discount_price ) ; } EOF # |                      | “.” 匹配
+ 236 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 ) 后续实参 表达式续 项后缀 id | title , book . version ) , discount_price ) ; } EOF # |                      | “title” 匹配
+ 237 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 ) 后续实参 表达式续 项后缀 | , book . version ) , discount_price ) ; } EOF # | 项后缀 -> ε             | 项后缀 弹栈 (空推导)
+ 238 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 ) 后续实参 表达式续 | , book . version ) , discount_price ) ; } EOF # | 表达式续 -> ε            | 表 达式续 弹栈 (空推导)
+ 239 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 ) 后续实参     | , book . version ) , discount_price ) ; } EOF # | 后续实参 -> , 实参列表       | 后续实参 弹栈, , 实参列表 逆序压栈
+ 240 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 ) 实参列表 ,   | , book . version ) , discount_price ) ; } EOF # |                      | “,” 匹配
+ 241 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 ) 实参列表     | book . version ) , discount_price ) ; } EOF # | 实参列表 -> 表达式 后续实参     | 实 参列表 弹栈, 表达式 后续实参 逆序压栈
+ 242 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 ) 后续实参 表达式 | book . version ) , discount_price ) ; } EOF # | 表达式 -> 项 表达式续        | 表 达式 弹栈, 项 表达式续 逆序压栈
+ 243 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 ) 后续实参 表达式续 项 | book . version ) , discount_price ) ; } EOF # | 项 -> id 项后缀          | 项 弹栈, id 项后缀 逆序压栈
+ 244 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 ) 后续实参 表达式续 项后缀 id | book . version ) , discount_price ) ; } EOF # |                      | “book” 匹配
+ 245 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 ) 后续实参 表达式续 项后缀 | . version ) , discount_price ) ; } EOF # | 项后缀 -> . id 项后缀      |  项后缀 弹栈, . id 项后缀 逆序压栈
+ 246 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 ) 后续实参 表达式续 项后缀 id . | . version ) , discount_price ) ; } EOF # |                      | “.” 匹配
+ 247 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 ) 后续实参 表达式续 项后缀 id | version ) , discount_price ) ; } EOF # |                      | “version” 匹配
+ 248 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 ) 后续实参 表达式续 项后缀 | ) , discount_price ) ; } EOF # | 项后缀 -> ε             | 项后缀 弹栈 ( 空推导)
+ 249 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 ) 后续实参 表达式续 | ) , discount_price ) ; } EOF # | 表达式续 -> ε            | 表达式续 弹栈 (空推 导)
+ 250 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 ) 后续实参     | ) , discount_price ) ; } EOF # | 后续实参 -> ε            | 后续实参 弹栈 (空推导)
+ 251 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 )          | ) , discount_price ) ; } EOF # |                      | “)” 匹配
+ 252 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀            | , discount_price ) ; } EOF #   | 项后缀 -> ε             | 项后缀 弹栈 (空推导)
+ 253 | # 程序 } 语句序列 ; ) 后续实参 表达式续                | , discount_price ) ; } EOF #   | 表达式续 -> ε            | 表达式续 弹栈 (空推导)
+ 254 | # 程序 } 语句序列 ; ) 后续实参                     | , discount_price ) ; } EOF #   | 后续实参 -> , 实参列表       | 后续实参 弹栈, , 实参列表 逆序压栈
+ 255 | # 程序 } 语句序列 ; ) 实参列表 ,                   | , discount_price ) ; } EOF #   |                      | “,” 匹配
+ 256 | # 程序 } 语句序列 ; ) 实参列表                     | discount_price ) ; } EOF #     | 实参列表 -> 表达式 后续实参     | 实参列表 弹栈, 表达式 后续实 参 逆序压栈
+ 257 | # 程序 } 语句序列 ; ) 后续实参 表达式                 | discount_price ) ; } EOF #     | 表达式 -> 项 表达式续        | 表达式 弹栈, 项 表达式续 逆序压栈
+ 258 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项              | discount_price ) ; } EOF #     | 项 -> id 项后缀          | 项 弹栈, id 项后缀 逆序压栈
+ 259 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀 id         | discount_price ) ; } EOF #     |                      | “discount_price” 匹配
+ 260 | # 程序 } 语句序列 ; ) 后续实参 表达式续 项后缀            | ) ; } EOF #                    | 项后缀 -> ε             | 项后缀 弹栈 (空推导)
+ 261 | # 程序 } 语句序列 ; ) 后续实参 表达式续                | ) ; } EOF #                    | 表达式续 -> ε            | 表达式续 弹栈 (空推导)
+ 262 | # 程序 } 语句序列 ; ) 后续实参                     | ) ; } EOF #                    | 后续实参 -> ε            | 后续实参 弹栈 (空推导)
+ 263 | # 程序 } 语句序列 ; )                          | ) ; } EOF #                    |                      | “)” 匹配
+ 264 | # 程序 } 语句序列 ;                            | ; } EOF #                      |                      | “;” 匹配
+ 265 | # 程序 } 语句序列                              | } EOF #                        | 语句序列 -> ε            | 语句序列 弹栈 (空推导)
+ 266 | # 程序 }                                   | } EOF #                        |                      | “}” 匹配
+ 267 | # 程序                                     | EOF #                          | 程序 -> ε              | 程序 弹栈 (空推导)
+ 268 | #                                        | EOF #                          |                      | “EOF” 匹配
+
+RESULT: 语法分析成功！
+
+SETS:
+FIRST:
+  结构体体后缀 -> ['*', ';', 'id']
+  实参列表 -> ['(', '*', 'OP', 'char_lit', 'epsilon', 'float_lit', 'id', 'int_lit', 'string_lit']
+  赋值运算符 -> ['=']
+  赋值或调用 -> ['(', '.', '=', '[']
+  基础类型 -> ['char', 'double', 'float', 'int', 'long', 'short', 'signed', 'unsigned', 'void']
+  语句块 -> ['{']
+  声明 -> ['char', 'double', 'float', 'int', 'long', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void']
+  声明语句 -> ['char', 'double', 'float', 'int', 'long', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void']
+  声明后缀 -> ['(', ',', ';', '=', '[']
+  表达式续 -> ['OP', 'epsilon']
+  else分支 -> ['else']
+  表达式 -> ['(', '*', 'OP', 'char_lit', 'float_lit', 'id', 'int_lit', 'string_lit']
+  可选表达式 -> ['(', '*', 'OP', 'char_lit', 'epsilon', 'float_lit', 'id', 'int_lit', 'string_lit']
+  循环初始化 -> ['char', 'double', 'epsilon', 'float', 'id', 'int', 'long', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void']
+  循环步进 -> ['epsilon', 'id']
+  循环语句 -> ['for']
+  条件语句 -> ['if']
+  初始化 -> ['(', '*', 'OP', 'char_lit', 'float_lit', 'id', 'int_lit', 'string_lit', '{']
+  初始化列表 -> ['(', '*', 'OP', 'char_lit', 'float_lit', 'id', 'int_lit', 'string_lit', '{']
+  可选初始化 -> ['=', 'epsilon']
+  成员 -> ['char', 'double', 'float', 'int', 'long', 'short', 'signed', 'struct', 'type_id', 'unsigned', 'void']
+  成员列表 -> ['char', 'double', 'epsilon', 'float', 'int', 'long', 'short', 'signed', 'struct', 'type_id', 'unsigned', 'void']
+  成员类型 -> ['char', 'double', 'float', 'int', 'long', 'short', 'signed', 'struct', 'type_id', 'unsigned', 'void']
+  后续实参 -> [',', 'epsilon']
+  后续声明 -> [',', ';']
+  后续初始化 -> [',', 'epsilon']
+  NonStructDecl -> ['char', 'double', 'float', 'int', 'long', 'short', 'signed', 'type_id', 'unsigned', 'void']
+  形参列表 -> ['epsilon', 'void']
+  指针 -> ['*', 'epsilon']
+  返回语句 -> ['return']
+  返回值 -> ['(', '*', 'OP', 'char_lit', 'epsilon', 'float_lit', 'id', 'int_lit', 'string_lit']
+  程序 -> ['char', 'double', 'epsilon', 'float', 'int', 'long', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void']
+  简单语句 -> ['id']
+  语句 -> ['char', 'double', 'float', 'for', 'id', 'if', 'int', 'long', 'return', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void', '{']
+  语句序列 -> ['char', 'double', 'epsilon', 'float', 'for', 'id', 'if', 'int', 'long', 'return', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void', '{']
+  结构体标签后缀 -> ['*', 'id', '{']
+  结构体声明 -> ['struct']
+  结构体头 -> ['id', '{']
+  项 -> ['(', '*', 'OP', 'char_lit', 'float_lit', 'id', 'int_lit', 'string_lit']
+  项后缀 -> ['(', '.', '[', 'epsilon']
+  类型 -> ['char', 'double', 'float', 'int', 'long', 'short', 'signed', 'type_id', 'unsigned', 'void']
+  类型别名 -> ['id']
+  类型别名声明 -> ['typedef']
+  typedef右部 -> ['char', 'double', 'float', 'int', 'long', 'short', 'signed', 'struct', 'type_id', 'unsigned', 'void']
+  typedef结构体 -> ['struct']
+  typedef结构体头 -> ['id', '{']
+  typedef结构体尾 -> ['id', '{']
+  一元运算 -> ['*', 'OP']
+  变量后缀 -> ['[', 'epsilon']
+  变量尾部 -> [',', ';', '=', '[']
+
+FOLLOW:
+  结构体体后缀 -> [';', 'EOF', 'char', 'double', 'else', 'float', 'for', 'id', 'if', 'int', 'long', 'return', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void', '{', '}']
+  实参列表 -> [')']
+  赋值运算符 -> ['(', '*', 'OP', 'char_lit', 'float_lit', 'id', 'int_lit', 'string_lit']
+  赋值或调用 -> [')', ';']
+  基础类型 -> ['*', 'id']
+  语句块 -> [';', 'EOF', 'char', 'double', 'else', 'float', 'for', 'id', 'if', 'int', 'long', 'return', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void', '{', '}']
+  声明 -> [';', 'EOF', 'char', 'double', 'else', 'float', 'for', 'id', 'if', 'int', 'long', 'return', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void', '{', '}']
+  声明语句 -> [';', 'char', 'double', 'else', 'float', 'for', 'id', 'if', 'int', 'long', 'return', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void', '{', '}']
+  声明后缀 -> [';', 'EOF', 'char', 'double', 'else', 'float', 'for', 'id', 'if', 'int', 'long', 'return', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void', '{', '}']
+  表达式续 -> [')', ',', ';', ']', '}']
+  else分支 -> ['char', 'double', 'else', 'float', 'for', 'id', 'if', 'int', 'long', 'return', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void', '{', '}']
+  表达式 -> [')', ',', ';', ']', '}']
+  可选表达式 -> [';']
+  循环初始化 -> [';']
+  循环步进 -> [')']
+  循环语句 -> ['char', 'double', 'else', 'float', 'for', 'id', 'if', 'int', 'long', 'return', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void', '{', '}']
+  条件语句 -> ['char', 'double', 'else', 'float', 'for', 'id', 'if', 'int', 'long', 'return', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void', '{', '}']
+  初始化 -> [',', ';', '}']
+  初始化列表 -> ['}']
+  可选初始化 -> [',', ';']
+  成员 -> ['char', 'double', 'float', 'int', 'long', 'short', 'signed', 'struct', 'type_id', 'unsigned', 'void', '}']
+  成员列表 -> ['}']
+  成员类型 -> ['id']
+  后续实参 -> [')']
+  后续声明 -> [';', 'EOF', 'char', 'double', 'else', 'float', 'for', 'id', 'if', 'int', 'long', 'return', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void', '{', '}']
+  后续初始化 -> ['}']
+  NonStructDecl -> [';', 'EOF', 'char', 'double', 'else', 'float', 'for', 'id', 'if', 'int', 'long', 'return', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void', '{', '}']
+  形参列表 -> [')']
+  指针 -> ['id']
+  返回语句 -> ['char', 'double', 'else', 'float', 'for', 'id', 'if', 'int', 'long', 'return', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void', '{', '}']
+  返回值 -> [';']
+  程序 -> ['EOF']
+  简单语句 -> [')', ';']
+  语句 -> ['char', 'double', 'else', 'float', 'for', 'id', 'if', 'int', 'long', 'return', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void', '{', '}']
+  语句序列 -> ['}']
+  结构体标签后缀 -> [';', 'EOF', 'char', 'double', 'else', 'float', 'for', 'id', 'if', 'int', 'long', 'return', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void', '{', '}']
+  结构体声明 -> [';', 'EOF', 'char', 'double', 'else', 'float', 'for', 'id', 'if', 'int', 'long', 'return', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void', '{', '}']
+  结构体头 -> [';', 'EOF', 'char', 'double', 'else', 'float', 'for', 'id', 'if', 'int', 'long', 'return', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void', '{', '}']
+  项 -> [')', ',', ';', 'OP', ']', '}']
+  项后缀 -> [')', ',', ';', 'OP', ']', '}']
+  类型 -> ['id']
+  类型别名 -> [';']
+  类型别名声明 -> [';', 'EOF', 'char', 'double', 'else', 'float', 'for', 'id', 'if', 'int', 'long', 'return', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void', '{', '}']
+  typedef右部 -> [';']
+  typedef结构体 -> [';']
+  typedef结构体头 -> [';']
+  typedef结构体尾 -> [';']
+  一元运算 -> ['(', '*', 'OP', 'char_lit', 'float_lit', 'id', 'int_lit', 'string_lit']
+  变量后缀 -> [',', ';', '=']
+  变量尾部 -> [';', 'EOF', 'char', 'double', 'else', 'float', 'for', 'id', 'if', 'int', 'long', 'return', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void', '{', '}']
+
+SELECT:
+  程序 -> 声明 程序 : ['char', 'double', 'float', 'int', 'long', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void']
+  程序 -> epsilon : ['EOF']
+  声明 -> 类型别名声明 : ['typedef']
+  声明 -> 结构体声明 : ['struct']
+  声明 -> NonStructDecl : ['char', 'double', 'float', 'int', 'long', 'short', 'signed', 'type_id', 'unsigned', 'void']
+  NonStructDecl -> 类型 id 声明后缀 : ['char', 'double', 'float', 'int', 'long', 'short', 'signed', 'type_id', 'unsigned', 'void']
+  类型别名声明 -> typedef typedef右部 ; : ['typedef']
+  typedef右部 -> 类型 类型别名 : ['char', 'double', 'float', 'int', 'long', 'short', 'signed', 'type_id', 'unsigned', 'void']
+  typedef右部 -> typedef结构体 : ['struct']
+  typedef结构体 -> struct typedef结构体头 : ['struct']
+  typedef结构体头 -> { 成员列表 } 类型别名 : ['{']
+  typedef结构体头 -> id typedef结构体尾 : ['id']
+  typedef结构体尾 -> { 成员列表 } 类型别名 : ['{']
+  typedef结构体尾 -> 类型别名 : ['id']
+  类型别名 -> id : ['id']
+  结构体声明 -> struct 结构体头 : ['struct']
+  结构体头 -> id 结构体标签后缀 : ['id']
+  结构体头 -> { 成员列表 } 结构体体后缀 : ['{']
+  结构体标签后缀 -> { 成员列表 } 结构体体后缀 : ['{']
+  结构体标签后缀 -> 指针 id 声明后缀 : ['*', 'id']
+  结构体体后缀 -> ; : [';']
+  结构体体后缀 -> 指针 id 声明后缀 : ['*', 'id']
+  类型 -> 基础类型 指针 : ['char', 'double', 'float', 'int', 'long', 'short', 'signed', 'unsigned', 'void']
+  类型 -> type_id 指针 : ['type_id']
+  基础类型 -> int : ['int']
+  基础类型 -> char : ['char']
+  基础类型 -> float : ['float']
+  基础类型 -> double : ['double']
+  基础类型 -> void : ['void']
+  基础类型 -> long : ['long']
+  基础类型 -> short : ['short']
+  基础类型 -> signed : ['signed']
+  基础类型 -> unsigned : ['unsigned']
+  指针 -> * 指针 : ['*']
+  指针 -> epsilon : ['id']
+  声明后缀 -> ( 形参列表 ) 语句块 : ['(']
+  声明后缀 -> 变量尾部 : [',', ';', '=', '[']
+  变量尾部 -> 变量后缀 可选初始化 后续声明 : [',', ';', '=', '[']
+  变量后缀 -> [ int_lit ] : ['[']
+  变量后缀 -> epsilon : [',', ';', '=']
+  可选初始化 -> = 初始化 : ['=']
+  可选初始化 -> epsilon : [',', ';']
+  后续声明 -> ; : [';']
+  后续声明 -> , id 变量尾部 : [',']
+  初始化 -> { 初始化列表 } : ['{']
+  初始化 -> 表达式 : ['(', '*', 'OP', 'char_lit', 'float_lit', 'id', 'int_lit', 'string_lit']
+  初始化列表 -> 初始化 后续初始化 : ['(', '*', 'OP', 'char_lit', 'float_lit', 'id', 'int_lit', 'string_lit', '{']
+  后续初始化 -> , 初始化列表 : [',']
+  后续初始化 -> epsilon : ['}']
+  成员列表 -> 成员 成员列表 : ['char', 'double', 'float', 'int', 'long', 'short', 'signed', 'struct', 'type_id', 'unsigned', 'void']
+  成员列表 -> epsilon : ['}']
+  成员 -> 成员类型 id 变量后缀 ; : ['char', 'double', 'float', 'int', 'long', 'short', 'signed', 'struct', 'type_id', 'unsigned', 'void']
+  成员类型 -> 类型 : ['char', 'double', 'float', 'int', 'long', 'short', 'signed', 'type_id', 'unsigned', 'void']
+  成员类型 -> struct id 指针 : ['struct']
+  语句块 -> { 语句序列 } : ['{']
+  语句序列 -> 语句 语句序列 : ['char', 'double', 'float', 'for', 'id', 'if', 'int', 'long', 'return', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void', '{']
+  语句序列 -> epsilon : ['}']
+  语句 -> 声明语句 : ['char', 'double', 'float', 'int', 'long', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void']
+  语句 -> 返回语句 : ['return']
+  语句 -> 条件语句 : ['if']
+  语句 -> 循环语句 : ['for']
+  语句 -> 语句块 : ['{']
+  语句 -> 简单语句 ; : ['id']
+  声明语句 -> 声明 : ['char', 'double', 'float', 'int', 'long', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void']
+  返回语句 -> return 返回值 ; : ['return']
+  返回值 -> 表达式 : ['(', '*', 'OP', 'char_lit', 'float_lit', 'id', 'int_lit', 'string_lit']
+  返回值 -> epsilon : [';']
+  条件语句 -> if ( 表达式 ) 语句 else分支 : ['if']
+  else分支 -> else 语句 : ['else']
+  循环语句 -> for ( 循环初始化 ; 可选表达式 ; 循环步进 ) 语句 : ['for']
+  循环初始化 -> 声明语句 : ['char', 'double', 'float', 'int', 'long', 'short', 'signed', 'struct', 'type_id', 'typedef', 'unsigned', 'void']
+  循环初始化 -> 简单语句 : ['id']
+  循环初始化 -> epsilon : [';']
+  可选表达式 -> 表达式 : ['(', '*', 'OP', 'char_lit', 'float_lit', 'id', 'int_lit', 'string_lit']
+  可选表达式 -> epsilon : [';']
+  循环步进 -> 简单语句 : ['id']
+  循环步进 -> epsilon : [')']
+  简单语句 -> id 赋值或调用 : ['id']
+  赋值或调用 -> 赋值运算符 表达式 : ['=']
+  赋值或调用 -> ( 实参列表 ) : ['(']
+  赋值或调用 -> . id 赋值或调用 : ['.']
+  赋值或调用 -> [ 表达式 ] 赋值或调用 : ['[']
+  赋值运算符 -> = : ['=']
+  表达式 -> 项 表达式续 : ['(', '*', 'OP', 'char_lit', 'float_lit', 'id', 'int_lit', 'string_lit']
+  表达式续 -> OP 项 表达式续 : ['OP']
+  表达式续 -> epsilon : [')', ',', ';', ']', '}']
+  项 -> id 项后缀 : ['id']
+  项 -> int_lit : ['int_lit']
+  项 -> float_lit : ['float_lit']
+  项 -> string_lit : ['string_lit']
+  项 -> char_lit : ['char_lit']
+  项 -> ( 表达式 ) : ['(']
+  项 -> 一元运算 项 : ['*', 'OP']
+  一元运算 -> OP : ['OP']
+  一元运算 -> * : ['*']
+  项后缀 -> [ 表达式 ] 项后缀 : ['[']
+  项后缀 -> . id 项后缀 : ['.']
+  项后缀 -> ( 实参列表 ) 项后缀 : ['(']
+  项后缀 -> epsilon : [')', ',', ';', 'OP', ']', '}']
+  形参列表 -> void : ['void']
+  形参列表 -> epsilon : [')']
+  实参列表 -> 表达式 后续实参 : ['(', '*', 'OP', 'char_lit', 'float_lit', 'id', 'int_lit', 'string_lit']
+  实参列表 -> epsilon : [')']
+  后续实参 -> , 实参列表 : [',']
+  后续实参 -> epsilon : [')']

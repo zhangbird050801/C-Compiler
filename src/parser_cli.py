@@ -5,17 +5,18 @@ from parser_core import LL1Parser
 
 
 def show_sets(p):
+    disp = p.display
     s = p.calc_sets()
     print("FIRST:")
     for k in sorted(s['first']):
-        print(" ", k, "->", sorted(s['first'][k]))
+        print(" ", disp(k), "->", [disp(x) for x in sorted(s['first'][k])])
     print("\nFOLLOW:")
     for k in sorted(s['follow']):
-        print(" ", k, "->", sorted(s['follow'][k]))
+        print(" ", disp(k), "->", [disp(x) for x in sorted(s['follow'][k])])
     print("\nSELECT:")
     for (h, prod), v in s['select'].items():
-        r = " ".join(prod) if prod else "epsilon"
-        print(" ", h, "->", r, ":", sorted(v))
+        r = " ".join(disp(x) for x in prod) if prod else "epsilon"
+        print(" ", disp(h), "->", r, ":", [disp(x) for x in sorted(v)])
 
 
 def show_tokens(tokens):
@@ -49,7 +50,7 @@ def main():
     if parser.conflicts:
         print("\nLL(1) 冲突:")
         for A, a, old, new in parser.conflicts:
-            print(f"  M[{A}, {a}] : {A} -> {' '.join(old)}  AND  {A} -> {' '.join(new)}")
+            print(f"  M[{parser.display(A)}, {a}] : {parser.display(A)} -> {' '.join(old)}  AND  {parser.display(A)} -> {' '.join(new)}")
         return
 
     records, ok, msg = parser.analyze(tokens)

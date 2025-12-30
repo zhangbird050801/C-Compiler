@@ -6,6 +6,58 @@ from typing import Dict, List, Tuple, Set, Optional
 from constants import TYPES, EOF
 
 EPS = "epsilon"
+# 用于输出的中文别名
+ALIAS = {
+    "S": "程序",
+    "Decl": "声明",
+    "TypedefDecl": "类型别名声明",
+    "TypedefRhs": "typedef右部",
+    "TypedefStruct": "typedef结构体",
+    "TypedefStructHead": "typedef结构体头",
+    "TypedefStructTail": "typedef结构体尾",
+    "TypeAlias": "类型别名",
+    "StructDecl": "结构体声明",
+    "StructHead": "结构体头",
+    "StructAfterTag": "结构体标签后缀",
+    "AfterStructBody": "结构体体后缀",
+    "Type": "类型",
+    "BaseType": "基础类型",
+    "Ptr": "指针",
+    "DeclSuf": "声明后缀",
+    "VarTail": "变量尾部",
+    "VarSuf": "变量后缀",
+    "InitOpt": "可选初始化",
+    "NextDecl": "后续声明",
+    "Init": "初始化",
+    "InitList": "初始化列表",
+    "NextInit": "后续初始化",
+    "MemberList": "成员列表",
+    "Member": "成员",
+    "MemberType": "成员类型",
+    "Block": "语句块",
+    "StmtList": "语句序列",
+    "Stmt": "语句",
+    "DeclStmt": "声明语句",
+    "RetStmt": "返回语句",
+    "RetVal": "返回值",
+    "IfStmt": "条件语句",
+    "ElsePart": "else分支",
+    "ForStmt": "循环语句",
+    "ForInit": "循环初始化",
+    "ExprOpt": "可选表达式",
+    "ForStep": "循环步进",
+    "SimpleStmt": "简单语句",
+    "AssignOrCall": "赋值或调用",
+    "AssignOp": "赋值运算符",
+    "Expr": "表达式",
+    "E_": "表达式续",
+    "Term": "项",
+    "Unary": "一元运算",
+    "TermSuf": "项后缀",
+    "Params": "形参列表",
+    "Args": "实参列表",
+    "NextArg": "后续实参",
+}
 
 
 @dataclass(frozen=True)
@@ -96,7 +148,8 @@ def c_grammar() -> Grammar:
         "Term": [["id", "TermSuf"], ["int_lit"], ["float_lit"], ["string_lit"], ["char_lit"], ["(", "Expr", ")"], ["Unary", "Term"]],
         "Unary": [["OP"], ["*"]],
 
-        "TermSuf": [["[", "Expr", "]", "TermSuf"], [".", "id", "TermSuf"], [EPS]],
+        # Term 后缀支持数组、成员访问以及函数调用
+        "TermSuf": [["[", "Expr", "]", "TermSuf"], [".", "id", "TermSuf"], ["(", "Args", ")", "TermSuf"], [EPS]],
 
         "Params": [["void"], [EPS]],
         "Args": [["Expr", "NextArg"], [EPS]],
@@ -231,6 +284,9 @@ class LL1Parser:
         self.typedef_names: Set[str] = set()
         self._capture_typedef_alias = False
 
+    def display(self, sym: str) -> str:
+        return ALIAS.get(sym, sym)
+
     def symbolize(self, tok) -> str:
         tname = TYPES.get(tok.type, "UNKNOWN")
         attr = tok.attribute
@@ -274,11 +330,12 @@ class LL1Parser:
         def rest_input_str(i: int) -> str:
             if i >= len(filtered):
                 return "#"
-            return "".join([t.attribute for t in filtered[i:]]) + "#"
+            attrs = [t.attribute for t in filtered[i:]]
+            return " ".join(attrs) + " #"
 
         while stack:
             top = stack[-1]
-            stack_str = " ".join(stack).replace("EOF", "#")
+            stack_str = " ".join(self.display(s) for s in stack).replace("EOF", "#")
             input_str = rest_input_str(ptr)
 
             if ptr < len(filtered):
@@ -292,6 +349,10 @@ class LL1Parser:
                 line = -1
 
             if top in self.terminals or top == "EOF":
+                # “*” 可能被文法当成 OP（乘法）或字面“*”（指针相关）。栈顶若是 OP，允许把“*”视作 OP 匹配。
+                if top == "OP" and attr == "*":
+                    lookahead = "OP"
+
                 if top == lookahead:
                     if top == "id" and self._capture_typedef_alias:
                         self.typedef_names.add(attr)
@@ -302,18 +363,25 @@ class LL1Parser:
                     if top == "EOF":
                         break
                 else:
-                    return records, False, f"匹配失败：期望 {top} 但看到 {attr} (行 {line})"
+                    return records, False, f"匹配失败：期望 {self.display(top)} 但看到 {attr} (行 {line})"
             else:
                 key = (top, lookahead)
+                # “*” 既可能是指针/解引用（文法里用"*"），也可能是乘法（文法用 OP）。
+                # 如果按字面"*"查不到表项，尝试把它视作 OP 再查一次。
+                if key not in self.table and attr == "*":
+                    lookahead = "OP"
+                    key = (top, lookahead)
                 if key not in self.table:
-                    return records, False, f"文法错误：无法用 {top} 匹配 {attr} (行 {line})"
+                    return records, False, f"文法错误：无法用 {self.display(top)} 匹配 {attr} (行 {line})"
 
                 prod = self.table[key]
                 if top == "TypeAlias" and prod == ["id"]:
                     self._capture_typedef_alias = True
 
-                prod_str = f"{top} -> {' '.join(prod)}" if prod != [EPS] else f"{top} -> ε"
-                action_str = f"{top} 弹栈, {' '.join(prod)} 逆序压栈" if prod != [EPS] else f"{top} 弹栈 (空推导)"
+                prod_disp = " ".join(self.display(s) for s in prod)
+                top_disp = self.display(top)
+                prod_str = f"{top_disp} -> {prod_disp}" if prod != [EPS] else f"{top_disp} -> ε"
+                action_str = f"{top_disp} 弹栈, {prod_disp} 逆序压栈" if prod != [EPS] else f"{top_disp} 弹栈 (空推导)"
                 records.append((step, stack_str, input_str, prod_str, action_str))
 
                 stack.pop()
