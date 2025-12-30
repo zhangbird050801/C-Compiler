@@ -57,6 +57,12 @@ ALIAS = {
     "Params": "形参列表",
     "Args": "实参列表",
     "NextArg": "后续实参",
+    "int_lit": "整型常量",
+    "float_lit": "浮点常量",
+    "char_lit": "字符常量",
+    "string_lit": "字符串常量",
+    "id": "标识符",
+    "type_id": "类型标识符",
 }
 
 
