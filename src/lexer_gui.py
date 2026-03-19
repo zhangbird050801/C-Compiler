@@ -1,5 +1,5 @@
 """
-C 语言编译器实验 - 语法分析 (完美表头优化版)
+C 语言编译器实验 - 完整编译流程可视化
 """
 import tkinter as tk
 from tkinter import filedialog, scrolledtext, messagebox, ttk, font
@@ -10,10 +10,32 @@ try:
 except ImportError:
     LL1Parser = None
 
+try:
+    from compiler import Compiler
+    COMPILER_AVAILABLE = True
+except ImportError:
+    COMPILER_AVAILABLE = False
+    Compiler = None
+
+try:
+    from semantic_analyzer import SemanticAnalyzer
+except ImportError:
+    SemanticAnalyzer = None
+
+try:
+    from ir_generator import IRGenerator
+except ImportError:
+    IRGenerator = None
+
+try:
+    from codegen import CodeGen
+except ImportError:
+    CodeGen = None
+
 class LexerApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("C 语言编译器实验 - 语法分析与文法集合")
+        self.title("C 语言编译器实验 - 完整编译流程")
         self.geometry("1400x900")
         self.text_font = font.Font(family="Consolas", size=10)
         self.header_font = font.Font(family="Microsoft YaHei", size=11, weight="bold")
@@ -34,6 +56,7 @@ class LexerApp(tk.Tk):
         ttk.Button(top_frame, text="1. 加载 C 文件", command=self.load_file).pack(side='left', padx=5)
         ttk.Button(top_frame, text="2. 运行词法分析", command=self.run_analysis).pack(side='left', padx=5)
         ttk.Button(top_frame, text="3. 生成分析表 & 集合", command=self.run_parser).pack(side='left', padx=5)
+        ttk.Button(top_frame, text="4. 完整编译", command=self.run_full_compile).pack(side='left', padx=5)
         ttk.Button(top_frame, text="清除全部", command=self.clear_all).pack(side='right', padx=5)
 
         self.paned_window = ttk.PanedWindow(self, orient='horizontal')
@@ -109,6 +132,55 @@ class LexerApp(tk.Tk):
         hsb_sets.grid(row=1, column=0, sticky='ew')
         self.sets_frame.grid_columnconfigure(0, weight=1)
         self.sets_frame.grid_rowconfigure(0, weight=1)
+
+        # Tab 4: 语义分析与符号表
+        self.semantic_tab = ttk.Frame(self.notebook)
+        self.notebook.add(self.semantic_tab, text=" 语义分析 & 符号表 ")
+        
+        semantic_cols = ("name", "type", "kind", "scope", "offset")
+        self.semantic_tree = ttk.Treeview(self.semantic_tab, columns=semantic_cols, show='headings')
+        
+        self.semantic_tree.heading("name", text="名称"); self.semantic_tree.column("name", width=150, anchor='w')
+        self.semantic_tree.heading("type", text="类型"); self.semantic_tree.column("type", width=200, anchor='w')
+        self.semantic_tree.heading("kind", text="种类"); self.semantic_tree.column("kind", width=100, anchor='center')
+        self.semantic_tree.heading("scope", text="作用域"); self.semantic_tree.column("scope", width=80, anchor='center')
+        self.semantic_tree.heading("offset", text="偏移"); self.semantic_tree.column("offset", width=80, anchor='center')
+        
+        vsb_sem = ttk.Scrollbar(self.semantic_tab, orient="vertical", command=self.semantic_tree.yview)
+        hsb_sem = ttk.Scrollbar(self.semantic_tab, orient="horizontal", command=self.semantic_tree.xview)
+        self.semantic_tree.configure(yscrollcommand=vsb_sem.set, xscrollcommand=hsb_sem.set)
+        self.semantic_tree.grid(row=0, column=0, sticky='nsew')
+        vsb_sem.grid(row=0, column=1, sticky='ns')
+        hsb_sem.grid(row=1, column=0, sticky='ew')
+        self.semantic_tab.grid_columnconfigure(0, weight=1)
+        self.semantic_tab.grid_rowconfigure(0, weight=1)
+
+        # Tab 5: 中间代码（四元式）
+        self.ir_tab = ttk.Frame(self.notebook)
+        self.notebook.add(self.ir_tab, text=" 中间代码（四元式） ")
+        
+        ir_cols = ("index", "op", "arg1", "arg2", "result", "readable")
+        self.ir_tree = ttk.Treeview(self.ir_tab, columns=ir_cols, show='headings')
+        
+        self.ir_tree.heading("index", text="序号"); self.ir_tree.column("index", width=50, anchor='center')
+        self.ir_tree.heading("op", text="操作符"); self.ir_tree.column("op", width=80, anchor='center')
+        self.ir_tree.heading("arg1", text="参数1"); self.ir_tree.column("arg1", width=120, anchor='w')
+        self.ir_tree.heading("arg2", text="参数2"); self.ir_tree.column("arg2", width=120, anchor='w')
+        self.ir_tree.heading("result", text="结果"); self.ir_tree.column("result", width=120, anchor='w')
+        self.ir_tree.heading("readable", text="可读形式"); self.ir_tree.column("readable", width=300, anchor='w')
+        
+        vsb_ir = ttk.Scrollbar(self.ir_tab, orient="vertical", command=self.ir_tree.yview)
+        hsb_ir = ttk.Scrollbar(self.ir_tab, orient="horizontal", command=self.ir_tree.xview)
+        self.ir_tree.configure(yscrollcommand=vsb_ir.set, xscrollcommand=hsb_ir.set)
+        self.ir_tree.grid(row=0, column=0, sticky='nsew')
+        vsb_ir.grid(row=0, column=1, sticky='ns')
+        hsb_ir.grid(row=1, column=0, sticky='ew')
+        self.ir_tab.grid_columnconfigure(0, weight=1)
+        self.ir_tab.grid_rowconfigure(0, weight=1)
+
+        # Tab 6: 目标代码（汇编）
+        self.asm_tab = scrolledtext.ScrolledText(self.notebook, wrap=tk.NONE, font=self.text_font, state='disabled')
+        self.notebook.add(self.asm_tab, text=" 目标代码（汇编） ")
 
         self.paned_window.add(output_frame, weight=3)
 
@@ -236,6 +308,65 @@ class LexerApp(tk.Tk):
             prod_str = f"{lhs_disp} -> {rhs_str}"
             add_row(f"Select({prod_str})", "=", fmt_set(terms))
 
+    def run_full_compile(self):
+        """运行完整编译流程"""
+        if not COMPILER_AVAILABLE:
+            messagebox.showerror("错误", "编译器模块未找到，请确保 compiler.py 存在")
+            return
+        
+        code = self.input_text.get("1.0", tk.END).strip()
+        if not code:
+            messagebox.showwarning("警告", "请输入或加载C源代码")
+            return
+        
+        try:
+            compiler = Compiler()
+            result = compiler.compile(code, verbose=False)
+            
+            if result.success:
+                # 显示语义分析结果（符号表）
+                for item in self.semantic_tree.get_children():
+                    self.semantic_tree.delete(item)
+                
+                if result.symbol_table:
+                    for name, symbol in result.symbol_table.global_scope.symbols.items():
+                        kind_str = symbol.kind.value if symbol.kind else ""
+                        type_str = str(symbol.type_info) if symbol.type_info else ""
+                        self.semantic_tree.insert("", tk.END, 
+                            values=(name, type_str, kind_str, symbol.scope_level, symbol.offset))
+                
+                # 显示中间代码（四元式）
+                for item in self.ir_tree.get_children():
+                    self.ir_tree.delete(item)
+                
+                for i, quad in enumerate(result.quadruples):
+                    self.ir_tree.insert("", tk.END,
+                        values=(i, quad.op, quad.arg1, quad.arg2, quad.result, quad.to_readable()))
+                
+                # 显示目标代码（汇编）
+                self.asm_tab.config(state='normal')
+                self.asm_tab.delete("1.0", tk.END)
+                self.asm_tab.insert("1.0", result.assembly_code)
+                self.asm_tab.config(state='disabled')
+                
+                # 切换到语义分析选项卡
+                self.notebook.select(3)
+                
+                messagebox.showinfo("成功", 
+                    f"编译成功！\n"
+                    f"- 识别 {len(result.tokens)} 个token\n"
+                    f"- 符号表包含 {len(result.symbol_table.global_scope.symbols)} 个符号\n"
+                    f"- 生成 {len(result.quadruples)} 条四元式\n"
+                    f"- 生成 {len(result.assembly_code.split(chr(10)))} 行汇编代码")
+            else:
+                error_msg = "\n".join(result.errors[:5])
+                messagebox.showerror("编译失败", f"编译过程中出现错误：\n\n{error_msg}")
+        
+        except Exception as e:
+            messagebox.showerror("错误", f"编译器内部错误：\n{str(e)}")
+            import traceback
+            traceback.print_exc()
+
     def clear_all(self):
         self.input_text.delete("1.0", tk.END)
         self.lexer_tab.config(state='normal')
@@ -245,6 +376,13 @@ class LexerApp(tk.Tk):
             self.tree.delete(item)
         for item in self.sets_tree.get_children():
             self.sets_tree.delete(item)
+        for item in self.semantic_tree.get_children():
+            self.semantic_tree.delete(item)
+        for item in self.ir_tree.get_children():
+            self.ir_tree.delete(item)
+        self.asm_tab.config(state='normal')
+        self.asm_tab.delete("1.0", tk.END)
+        self.asm_tab.config(state='disabled')
 
 if __name__ == '__main__':
     app = LexerApp()
