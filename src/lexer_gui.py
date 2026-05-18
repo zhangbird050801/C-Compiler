@@ -2,6 +2,7 @@
 C 语言编译器实验 - 完整编译流程可视化
 """
 import tkinter as tk
+from pathlib import Path
 from tkinter import filedialog, scrolledtext, messagebox, ttk, font
 from lexer_core import Lexer, TYPES, EOF
 
@@ -38,13 +39,16 @@ class LexerApp(tk.Tk):
         self.title("C 语言编译器实验 - 完整编译流程")
         self.geometry("1400x900")
         self.text_font = font.Font(family="Consolas", size=10)
-        self.header_font = font.Font(family="Microsoft YaHei", size=11, weight="bold")
+        self.ui_font = font.Font(family="Microsoft YaHei UI", size=10)
+        self.header_font = font.Font(family="Microsoft YaHei UI", size=11, weight="bold")
 
         # --- 样式配置 ---
         style = ttk.Style()
         # 设置 Treeview 行高，避免太拥挤
-        style.configure("Sets.Treeview", font=("Consolas", 10), rowheight=25)
-        style.configure("Sets.Treeview.Heading", font=("Microsoft YaHei", 10, "bold"))
+        style.configure("Treeview", font=("Microsoft YaHei UI", 10), rowheight=28)
+        style.configure("Treeview.Heading", font=("Microsoft YaHei UI", 10, "bold"))
+        style.configure("Sets.Treeview", font=("Microsoft YaHei UI", 10), rowheight=28)
+        style.configure("Sets.Treeview.Heading", font=("Microsoft YaHei UI", 10, "bold"))
 
         self.create_widgets()
 
@@ -122,6 +126,9 @@ class LexerApp(tk.Tk):
         # background: 浅灰色背景，显眼
         # font: 加粗，大一号
         self.sets_tree.tag_configure("header", background="#e1e1e1", foreground="#000000", font=("Microsoft YaHei", 10, "bold"))
+        self.sets_tree.column("left", width=520, anchor='w')
+        self.sets_tree.column("right", width=650, anchor='w')
+        self.sets_tree.tag_configure("header", background="#e1e1e1", foreground="#000000", font=("Microsoft YaHei UI", 10, "bold"))
 
         vsb_sets = ttk.Scrollbar(self.sets_frame, orient="vertical", command=self.sets_tree.yview)
         hsb_sets = ttk.Scrollbar(self.sets_frame, orient="horizontal", command=self.sets_tree.xview)
@@ -324,6 +331,23 @@ class LexerApp(tk.Tk):
             result = compiler.compile(code, verbose=False)
             
             if result.success:
+                self.lexer_tab.config(state='normal')
+                self.lexer_tab.delete("1.0", tk.END)
+                for token in result.tokens:
+                    t_type = TYPES.get(token.type, 'UNK')
+                    self.lexer_tab.insert(tk.END, f"[L{token.line:<2}] ({t_type:<15} : {token.attribute})\n")
+                self.lexer_tab.config(state='disabled')
+
+                for item in self.tree.get_children():
+                    self.tree.delete(item)
+                for step, stack, inp, prod, action in result.parse_records:
+                    self.tree.insert("", tk.END, values=(step, stack, inp, prod, action))
+
+                if LL1Parser is not None:
+                    parser = LL1Parser()
+                    if hasattr(parser, 'calc_sets'):
+                        self.display_sets(parser, parser.calc_sets())
+
                 # 显示语义分析结果（符号表）
                 for item in self.semantic_tree.get_children():
                     self.semantic_tree.delete(item)
@@ -348,9 +372,19 @@ class LexerApp(tk.Tk):
                 self.asm_tab.delete("1.0", tk.END)
                 self.asm_tab.insert("1.0", result.assembly_code)
                 self.asm_tab.config(state='disabled')
+
+                output_dir = Path(__file__).resolve().parent
+                output_asm = output_dir / "output.asm"
+                masm_asm = output_dir / "c-code.asm"
+                output_ir = output_dir / "output.ir"
+                output_asm.write_text(result.assembly_code, encoding="utf-8")
+                masm_asm.write_text(result.assembly_code, encoding="utf-8")
+                output_ir.write_text("\n".join(
+                    f"{idx:4d}  {quad.to_readable()}" for idx, quad in enumerate(result.quadruples)
+                ), encoding="utf-8")
                 
                 # 切换到语义分析选项卡
-                self.notebook.select(3)
+                self.notebook.select(0)
                 
                 messagebox.showinfo("成功", 
                     f"编译成功！\n"

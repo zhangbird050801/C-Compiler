@@ -11,6 +11,7 @@ class CodeGenerator:
         self.symbol_table = symbol_table
         self.asm_code: List[str] = []
         self.data_section: List[str] = []
+        self.stack_section: List[str] = []
         self.code_section: List[str] = []
         self.string_literals: Dict[str, str] = {}  # 字符串字面量映射
         self.string_count = 0
@@ -21,7 +22,7 @@ class CodeGenerator:
 
     def normalize_var_name(self, name: str) -> str:
         """规范化变量名到汇编标识符格式。"""
-        return name.replace('.', '_')
+        return name.replace('.', '_').replace('[', '_').replace(']', '')
 
     def is_float_literal(self, s: str) -> bool:
         return self.is_number(s) and ('.' in s or 'e' in s.lower())
@@ -62,7 +63,18 @@ class CodeGenerator:
     
     def emit_code(self, line: str):
         """添加代码段代码"""
-        self.code_section.append(line)
+        self.code_section.append(self.sanitize_asm_comment(line))
+    
+    def sanitize_asm_comment(self, line: str) -> str:
+        """Keep generated assembly comments ASCII so they render consistently."""
+        head, sep, comment = line.partition(";")
+        if not sep:
+            return line
+        if all(ord(ch) < 128 for ch in comment):
+            return line
+        if head.strip():
+            return head.rstrip()
+        return "; helper routines"
     
     def emit_comment(self, comment: str):
         """添加注释"""
@@ -201,7 +213,7 @@ class CodeGenerator:
     def generate_code_section(self):
         """生成代码段"""
         self.emit_code("CODE SEGMENT")
-        self.emit_code("    ASSUME CS:CODE, DS:DATA")
+        self.emit_code("    ASSUME CS:CODE, DS:DATA, SS:STACK")
         self.emit_code("")
         self.emit_code("START:")
         self.emit_code("    MOV AX, DATA")
@@ -452,13 +464,16 @@ class CodeGenerator:
         else:
             # 条件跳转
             # 比较arg1和arg2
+            float_compare = self.is_float_operand(arg1) or self.is_float_operand(arg2)
             if self.is_number(arg1):
-                self.emit_code(f"    MOV AX, {arg1}")
+                left_value = round(float(arg1) * self.fixed_scale) if float_compare else int(float(arg1))
+                self.emit_code(f"    MOV AX, {left_value}")
             else:
                 self.emit_code(f"    MOV AX, {self.normalize_var_name(arg1)}")
             
             if self.is_number(arg2):
-                self.emit_code(f"    MOV BX, {arg2}")
+                right_value = round(float(arg2) * self.fixed_scale) if float_compare else int(float(arg2))
+                self.emit_code(f"    MOV BX, {right_value}")
             else:
                 self.emit_code(f"    MOV BX, {self.normalize_var_name(arg2)}")
             
@@ -739,16 +754,29 @@ class CodeGenerator:
         self.emit_code("    PUSH BX")
         self.emit_code("    PUSH CX")
         self.emit_code("    PUSH DX")
-        self.emit_code("    XOR BX, BX")
+        self.emit_code("    PUSH SI")
+        self.emit_code("    PUSH DI")
+        self.emit_code("    XOR SI, SI")
+        self.emit_code("    XOR DI, DI")
         self.emit_code("    XOR CX, CX  ; 负号标记")
         self.emit_code("_ri_read:")
+        self.emit_code("    PUSH BX")
+        self.emit_code("    PUSH CX")
+        self.emit_code("    PUSH DX")
+        self.emit_code("    PUSH SI")
+        self.emit_code("    PUSH DI")
         self.emit_code("    MOV AH, 01H")
         self.emit_code("    INT 21H")
+        self.emit_code("    POP DI")
+        self.emit_code("    POP SI")
+        self.emit_code("    POP DX")
+        self.emit_code("    POP CX")
+        self.emit_code("    POP BX")
         self.emit_code("    CMP AL, 0DH")
         self.emit_code("    JE _ri_done")
         self.emit_code("    CMP AL, '-'")
         self.emit_code("    JNE _ri_digit")
-        self.emit_code("    MOV CX, 1")
+        self.emit_code("    MOV DI, 1")
         self.emit_code("    JMP _ri_read")
         self.emit_code("_ri_digit:")
         self.emit_code("    CMP AL, '0'")
@@ -756,21 +784,23 @@ class CodeGenerator:
         self.emit_code("    CMP AL, '9'")
         self.emit_code("    JA _ri_read")
         self.emit_code("    SUB AL, '0'")
-        self.emit_code("    MOV DL, AL")
-        self.emit_code("    MOV AX, BX")
+        self.emit_code("    CBW")
+        self.emit_code("    PUSH AX")
+        self.emit_code("    MOV AX, SI")
         self.emit_code("    MOV BX, 10")
         self.emit_code("    IMUL BX")
-        self.emit_code("    MOV BX, AX")
-        self.emit_code("    MOV AL, DL")
-        self.emit_code("    CBW")
-        self.emit_code("    ADD BX, AX")
+        self.emit_code("    MOV SI, AX")
+        self.emit_code("    POP AX")
+        self.emit_code("    ADD SI, AX")
         self.emit_code("    JMP _ri_read")
         self.emit_code("_ri_done:")
-        self.emit_code("    MOV AX, BX")
-        self.emit_code("    CMP CX, 0")
+        self.emit_code("    MOV AX, SI")
+        self.emit_code("    CMP DI, 0")
         self.emit_code("    JE _ri_exit")
         self.emit_code("    NEG AX")
         self.emit_code("_ri_exit:")
+        self.emit_code("    POP DI")
+        self.emit_code("    POP SI")
         self.emit_code("    POP DX")
         self.emit_code("    POP CX")
         self.emit_code("    POP BX")
@@ -782,6 +812,7 @@ class CodeGenerator:
         """生成完整的汇编代码"""
         self.asm_code.clear()
         self.data_section.clear()
+        self.stack_section.clear()
         self.code_section.clear()
         self.string_literals.clear()
         self.string_count = 0
@@ -799,9 +830,16 @@ class CodeGenerator:
         
         # 生成数据段
         self.generate_data_section()
+        self.stack_section.extend([
+            "STACK SEGMENT PARA STACK 'STACK'",
+            "    DW 100H DUP(?)",
+            "STACK ENDS",
+            "",
+        ])
         
         # 组合
         self.asm_code.extend(self.data_section)
+        self.asm_code.extend(self.stack_section)
         self.asm_code.extend(self.code_section)
         self.asm_code.append("END START")
         

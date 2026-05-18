@@ -103,7 +103,7 @@ def c_grammar() -> Grammar:
         "TypeAlias": [["id"]],
 
         "StructDecl": [["struct", "StructHead"]],
-        "StructHead": [["id", "StructAfterTag"], ["{", "MemberList", "}", "AfterStructBody"]],
+        "StructHead": [["id", "StructAfterTag"], ["type_id", "StructAfterTag"], ["{", "MemberList", "}", "AfterStructBody"]],
         "StructAfterTag": [["{", "MemberList", "}", "AfterStructBody"], ["Ptr", "id", "DeclSuf"]],
         "AfterStructBody": [[";"], ["Ptr", "id", "DeclSuf"]],
 
@@ -129,7 +129,7 @@ def c_grammar() -> Grammar:
         "Block": [["{", "StmtList", "}"]],
         "StmtList": [["Stmt", "StmtList"], [EPS]],
 
-        "Stmt": [["DeclStmt"], ["RetStmt"], ["IfStmt"], ["ForStmt"], ["Block"], ["SimpleStmt", ";"]],
+        "Stmt": [["DeclStmt"], ["RetStmt"], ["IfStmt"], ["WhileStmt"], ["ForStmt"], ["Block"], ["SimpleStmt", ";"]],
 
         "DeclStmt": [["Decl"]],
 
@@ -139,13 +139,15 @@ def c_grammar() -> Grammar:
         "IfStmt": [["if", "(", "Expr", ")", "Stmt", "ElsePart"]],
         "ElsePart": [["else", "Stmt"]],
 
+        "WhileStmt": [["while", "(", "Expr", ")", "Stmt"]],
+
         "ForStmt": [["for", "(", "ForInit", ";", "ExprOpt", ";", "ForStep", ")", "Stmt"]],
         "ForInit": [["DeclStmt"], ["SimpleStmt"], [EPS]],
         "ExprOpt": [["Expr"], [EPS]],
         "ForStep": [["SimpleStmt"], [EPS]],
 
         "SimpleStmt": [["id", "AssignOrCall"]],
-        "AssignOrCall": [["AssignOp", "Expr"], ["(", "Args", ")"], [".", "id", "AssignOrCall"], ["[", "Expr", "]", "AssignOrCall"]],
+        "AssignOrCall": [["AssignOp", "Expr"], ["(", "Args", ")"], ["++"], ["--"], [".", "id", "AssignOrCall"], ["[", "Expr", "]", "AssignOrCall"]],
         "AssignOp": [["="]],
 
         "Expr": [["Term", "E_"]],
@@ -307,7 +309,7 @@ class LL1Parser:
         if tname == "DELIMITER":
             return attr
         if tname == "OPERATOR":
-            if attr in ["=", ".", "*"]:
+            if attr in ["=", ".", "*", "++", "--"]:
                 return attr
             return "OP"
         if tname == "IDENTIFIER":
@@ -326,7 +328,10 @@ class LL1Parser:
         return tname
 
     def analyze(self, tokens):
-        filtered = [t for t in tokens if TYPES.get(t.type) != "PREPROCESSOR"]
+        filtered = [t for t in tokens if TYPES.get(t.type) != "PREPROCESSOR" and t.attribute != "const"]
+        for idx, tok in enumerate(filtered[:-2]):
+            if self.symbolize(tok) == "struct" and TYPES.get(filtered[idx + 1].type) == "IDENTIFIER" and filtered[idx + 2].attribute == "{":
+                self.typedef_names.add(filtered[idx + 1].attribute)
 
         stack: List[str] = ["EOF", self.grammar.start]
         ptr = 0

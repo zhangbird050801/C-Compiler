@@ -67,6 +67,7 @@ class Compiler:
             CompilerResult: 编译结果
         """
         self.result = CompilerResult()
+        source_code = self._normalize_source(source_code)
         
         try:
             # 1. 词法分析
@@ -141,6 +142,19 @@ class Compiler:
                 traceback.print_exc()
         
         return self.result
+
+    def _normalize_source(self, source_code: str) -> str:
+        """Normalize common full-width punctuation copied from Chinese documents."""
+        return source_code.translate(str.maketrans({
+            "；": ";",
+            "，": ",",
+            "（": "(",
+            "）": ")",
+            "｛": "{",
+            "｝": "}",
+            "［": "[",
+            "］": "]",
+        }))
     
     def lexical_analysis(self, source_code: str, verbose: bool = True) -> tuple[bool, List]:
         """词法分析"""
@@ -189,6 +203,7 @@ class Compiler:
         # 这里应该遍历语法分析的结果构建符号表
         # 简化版：直接从tokens提取信息
         symbol_table = self.semantic_analyzer.symbol_table
+        self._check_invalid_identifier_usage(tokens)
         
         # 简化的符号表构建（仅作示例）
         self._build_symbol_table_from_tokens(tokens, symbol_table)
@@ -208,6 +223,71 @@ class Compiler:
             print(symbol_table)
         
         return True, symbol_table
+
+    def _check_invalid_identifier_usage(self, tokens: List):
+        """Report reserved words used where a declaration name is required."""
+        from constants import TYPES
+
+        type_keywords = {"int", "float", "char", "double", "void", "long", "short", "signed", "unsigned"}
+        declaration_prefixes = type_keywords | {"const"}
+
+        i = 0
+        while i < len(tokens):
+            tok = tokens[i]
+            tok_type = TYPES.get(tok.type, "")
+
+            if tok_type != "KEYWORD" or tok.attribute not in declaration_prefixes:
+                i += 1
+                continue
+
+            start = i
+            if tok.attribute == "const":
+                i += 1
+                if i >= len(tokens) or TYPES.get(tokens[i].type, "") != "KEYWORD" or tokens[i].attribute not in type_keywords:
+                    continue
+
+            i += 1
+            while i < len(tokens) and tokens[i].attribute != ";":
+                while i < len(tokens) and tokens[i].attribute == "*":
+                    i += 1
+
+                if i >= len(tokens) or tokens[i].attribute == ";":
+                    break
+
+                current_type = TYPES.get(tokens[i].type, "")
+                if current_type == "KEYWORD":
+                    self.semantic_analyzer.error(f"关键字不能作为标识符: {tokens[i].attribute}", tokens[i].line)
+                    while i < len(tokens) and tokens[i].attribute != ";":
+                        i += 1
+                    break
+
+                if current_type == "IDENTIFIER":
+                    if i + 1 < len(tokens) and tokens[i + 1].attribute == "(":
+                        while i < len(tokens) and tokens[i].attribute not in {";", "{"}:
+                            i += 1
+                        break
+
+                    i += 1
+                    depth = 0
+                    while i < len(tokens):
+                        attr = tokens[i].attribute
+                        if attr in {"(", "[", "{"}:
+                            depth += 1
+                        elif attr in {")", "]", "}"}:
+                            depth -= 1
+                        elif depth == 0 and attr in {",", ";"}:
+                            break
+                        i += 1
+
+                    if i < len(tokens) and tokens[i].attribute == ",":
+                        i += 1
+                        continue
+                    break
+
+                i += 1
+
+            if i == start:
+                i += 1
     
     def intermediate_code_generation(self, symbol_table: SymbolTable, tokens: List, 
                                      verbose: bool = True) -> tuple[bool, IRGenerator]:
@@ -290,6 +370,126 @@ class Compiler:
                     symbol_table.define(symbol)
             
             i += 1
+
+    def _build_symbol_table_from_tokens(self, tokens: List, symbol_table: SymbolTable):
+        """Build a small symbol table directly from tokens."""
+        from symbol_table import Symbol, SymbolKind, Type
+        from constants import TYPES
+
+        struct_names = set()
+        for idx, tk in enumerate(tokens[:-1]):
+            if TYPES.get(tk.type, "") == "KEYWORD" and tk.attribute == "struct":
+                nxt = tokens[idx + 1]
+                if TYPES.get(nxt.type, "") == "IDENTIFIER":
+                    struct_names.add(nxt.attribute)
+
+        def skip_initializer(idx: int) -> int:
+            depth = 0
+            while idx < len(tokens):
+                attr = tokens[idx].attribute
+                if attr in {"(", "[", "{"}:
+                    depth += 1
+                elif attr in {")", "]", "}"}:
+                    depth -= 1
+                elif depth == 0 and attr in {",", ";"}:
+                    break
+                idx += 1
+            return idx
+
+        def define_variable(name: str, type_info: Type):
+            symbol = Symbol(name=name, kind=SymbolKind.VARIABLE, type_info=type_info)
+            symbol_table.define(symbol)
+
+        i = 0
+        while i < len(tokens):
+            tok = tokens[i]
+            tok_type = TYPES.get(tok.type, "")
+
+            if tok_type == "KEYWORD" and tok.attribute == "struct":
+                if (
+                    i + 2 < len(tokens)
+                    and TYPES.get(tokens[i + 1].type) == "IDENTIFIER"
+                    and tokens[i + 2].attribute == "{"
+                ):
+                    struct_name = tokens[i + 1].attribute
+                    if not symbol_table.lookup_struct(struct_name):
+                        symbol = Symbol(name=struct_name, kind=SymbolKind.STRUCT)
+                        symbol_table.define(symbol)
+
+                    i += 3
+                    depth = 1
+                    while i < len(tokens) and depth > 0:
+                        if tokens[i].attribute == "{":
+                            depth += 1
+                        elif tokens[i].attribute == "}":
+                            depth -= 1
+                        i += 1
+                    if i < len(tokens) and tokens[i].attribute == ";":
+                        i += 1
+                else:
+                    i += 1
+                continue
+
+            starts_builtin_decl = tok_type == "KEYWORD" and tok.attribute in ["int", "float", "char", "double"]
+            starts_struct_decl = tok_type == "IDENTIFIER" and tok.attribute in struct_names
+            if not (starts_builtin_decl or starts_struct_decl):
+                i += 1
+                continue
+
+            base_type = tok.attribute
+            is_struct_var = starts_struct_decl
+            i += 1
+
+            while i < len(tokens) and tokens[i].attribute != ";":
+                pointer_level = 0
+                while i < len(tokens) and tokens[i].attribute == "*":
+                    pointer_level += 1
+                    i += 1
+
+                if i >= len(tokens) or TYPES.get(tokens[i].type) != "IDENTIFIER":
+                    i += 1
+                    continue
+
+                var_name = tokens[i].attribute
+                type_info = Type(
+                    base=base_type,
+                    pointer_level=pointer_level,
+                    is_struct=is_struct_var,
+                    struct_name=base_type if is_struct_var else None,
+                )
+                i += 1
+
+                if i < len(tokens) and tokens[i].attribute == "(":
+                    depth = 1
+                    i += 1
+                    while i < len(tokens) and depth > 0:
+                        if tokens[i].attribute == "(":
+                            depth += 1
+                        elif tokens[i].attribute == ")":
+                            depth -= 1
+                        i += 1
+                    break
+
+                if i < len(tokens) and tokens[i].attribute == "[":
+                    i += 1
+                    if i < len(tokens) and TYPES.get(tokens[i].type) in ["CONST_DECIMAL", "CONST_OCTAL", "CONST_HEX"]:
+                        type_info.array_dims.append(int(tokens[i].attribute, 0))
+                    while i < len(tokens) and tokens[i].attribute != "]":
+                        i += 1
+                    if i < len(tokens):
+                        i += 1
+
+                define_variable(var_name, type_info)
+
+                if i < len(tokens) and tokens[i].attribute == "=":
+                    i = skip_initializer(i + 1)
+
+                if i < len(tokens) and tokens[i].attribute == ",":
+                    i += 1
+                    continue
+                break
+
+            i += 1
     
     def _generate_sample_ir(self, tokens: List):
         """根据当前 token 生成中间代码（简化版，支持顺序/选择/循环/输入输出）。"""
@@ -309,9 +509,15 @@ class Compiler:
         compare_ops = {"<", ">", "<=", ">=", "==", "!="}
         inverse_compare = {"<": ">=", ">": "<=", "<=": ">", ">=": "<", "==": "!=", "!=": "=="}
 
-        filtered_tokens = [t for t in tokens if TYPES.get(t.type, "") not in {"PREPROCESSOR", "EOF"}]
+        object_macros = self._collect_object_macros(tokens)
+        filtered_tokens = [
+            t for t in tokens
+            if TYPES.get(t.type, "") not in {"PREPROCESSOR", "EOF"} and t.attribute != "const"
+        ]
         n = len(filtered_tokens)
         i = 0
+        struct_defs = self._collect_struct_defs(filtered_tokens)
+        custom_type_names = set(struct_defs)
 
         def tok_type(idx: int) -> str:
             if 0 <= idx < n:
@@ -355,13 +561,68 @@ class Compiler:
                 return f'"{tok.attribute}"'
             if ttype == "CONST_CHAR":
                 return char_token_to_int(tok.attribute)
+            if ttype == "IDENTIFIER" and tok.attribute in object_macros:
+                return object_macros[tok.attribute]
             return tok.attribute
+
+        def parse_reference_operand(expr_tokens):
+            if not expr_tokens or TYPES.get(expr_tokens[0].type, "") != "IDENTIFIER":
+                return None
+
+            idx = 1
+            ref = expr_tokens[0].attribute
+            while idx < len(expr_tokens):
+                attr = expr_tokens[idx].attribute
+                if attr == "[":
+                    depth = 1
+                    idx += 1
+                    index_tokens = []
+                    while idx < len(expr_tokens) and depth > 0:
+                        a = expr_tokens[idx].attribute
+                        if a == "[":
+                            depth += 1
+                            index_tokens.append(expr_tokens[idx])
+                        elif a == "]":
+                            depth -= 1
+                            if depth > 0:
+                                index_tokens.append(expr_tokens[idx])
+                        else:
+                            index_tokens.append(expr_tokens[idx])
+                        idx += 1
+                    index_value = emit_expr(index_tokens)
+                    if index_value is None:
+                        return None
+                    ref = f"{ref}_{index_value}"
+                    continue
+
+                if attr == "." and idx + 1 < len(expr_tokens) and TYPES.get(expr_tokens[idx + 1].type, "") == "IDENTIFIER":
+                    ref = f"{ref}_{expr_tokens[idx + 1].attribute}"
+                    idx += 2
+                    continue
+
+                return None
+
+            return ref
 
         def emit_expr(expr_tokens):
             if not expr_tokens:
                 return None
             if len(expr_tokens) == 1:
                 return token_to_operand(expr_tokens[0])
+
+            if len(expr_tokens) == 2 and expr_tokens[0].attribute == "-":
+                operand = token_to_operand(expr_tokens[1])
+                if operand is None:
+                    return None
+                if operand.replace(".", "", 1).isdigit():
+                    return f"-{operand}"
+                temp = ir.new_temp()
+                ir.emit("-", "0", operand, temp)
+                return temp
+
+            ref_operand = parse_reference_operand(expr_tokens)
+            if ref_operand is not None:
+                return ref_operand
 
             operators = {"+", "-", "*", "/", "%"}
             precedence = {"+": 1, "-": 1, "*": 2, "/": 2, "%": 2}
@@ -429,10 +690,10 @@ class Compiler:
             depth = 0
             for tk in tokens_list:
                 a = tk.attribute
-                if a == "(":
+                if a in {"(", "[", "{"}:
                     depth += 1
                     cur.append(tk)
-                elif a == ")":
+                elif a in {")", "]", "}"}:
                     depth -= 1
                     cur.append(tk)
                 elif a == delimiter and depth == 0:
@@ -443,7 +704,7 @@ class Compiler:
             parts.append(cur)
             return parts
 
-        def parse_condition_tokens(cond_tokens):
+        def parse_simple_condition(cond_tokens):
             depth = 0
             cmp_idx = -1
             for idx, tk in enumerate(cond_tokens):
@@ -468,6 +729,19 @@ class Compiler:
                 return None
             return left, cond_tokens[cmp_idx].attribute, right
 
+        def parse_condition_tokens(cond_tokens):
+            and_parts = [part for part in split_top_level(cond_tokens, "&&") if part]
+            if len(and_parts) > 1:
+                conds = []
+                for part in and_parts:
+                    cond = parse_simple_condition(part)
+                    if cond is None:
+                        return None
+                    conds.append(cond)
+                return ("&&", conds)
+
+            return parse_simple_condition(cond_tokens)
+
         def patch_jump(jump_idx: int, target_idx: int):
             if 0 <= jump_idx < len(ir.quadruples):
                 ir.quadruples[jump_idx].result = str(target_idx)
@@ -476,6 +750,15 @@ class Compiler:
             left, op, right = cond
             inv = inverse_compare.get(op, "==")
             return ir.emit(f"j{inv}", left, right, placeholder)
+
+        def emit_false_jumps(cond, placeholder: str = "0") -> List[int]:
+            if cond and cond[0] == "&&":
+                return [emit_inverse_cond_jump(part, placeholder) for part in cond[1]]
+            return [emit_inverse_cond_jump(cond, placeholder)]
+
+        def patch_jumps(jump_indices: List[int], target_idx: int):
+            for jump_idx in jump_indices:
+                patch_jump(jump_idx, target_idx)
 
         def parse_parenthesized_tokens(start_idx: int):
             if tok_attr(start_idx) != "(":
@@ -586,6 +869,93 @@ class Compiler:
             for arg in args:
                 ir.emit("printf", "_", "_", arg)
 
+        def strip_outer_braces(token_list):
+            if len(token_list) >= 2 and token_list[0].attribute == "{" and token_list[-1].attribute == "}":
+                return token_list[1:-1]
+            return token_list
+
+        def emit_struct_initializer(type_name: str, var_name: str, array_size, init_tokens):
+            members = struct_defs.get(type_name, [])
+            if not members:
+                return
+
+            outer = strip_outer_braces(init_tokens)
+            records = split_top_level(outer, ",")
+            if array_size is not None:
+                for element_idx, record_tokens in enumerate(records):
+                    if element_idx >= array_size:
+                        break
+                    values = split_top_level(strip_outer_braces(record_tokens), ",")
+                    for member_idx, value_tokens in enumerate(values):
+                        if member_idx >= len(members):
+                            break
+                        value = emit_expr(strip_outer_braces(value_tokens))
+                        if value is not None:
+                            ir.emit("=", value, "_", f"{var_name}_{element_idx}_{members[member_idx]}")
+                return
+
+            values = split_top_level(outer, ",")
+            for member_idx, value_tokens in enumerate(values):
+                if member_idx >= len(members):
+                    break
+                value = emit_expr(strip_outer_braces(value_tokens))
+                if value is not None:
+                    ir.emit("=", value, "_", f"{var_name}_{members[member_idx]}")
+
+        def parse_declaration(type_name: str, is_struct_type: bool):
+            nonlocal i
+            i += 1
+            while i < n and tok_attr(i) != ";":
+                while tok_attr(i) == "*":
+                    i += 1
+
+                if tok_type(i) != "IDENTIFIER":
+                    i += 1
+                    continue
+
+                var_name = tok_attr(i)
+                array_size = None
+                i += 1
+
+                if tok_attr(i) == "[":
+                    i += 1
+                    if tok_type(i) in {"CONST_DECIMAL", "CONST_OCTAL", "CONST_HEX"}:
+                        array_size = int(tok_attr(i), 0)
+                    while i < n and tok_attr(i) != "]":
+                        i += 1
+                    if tok_attr(i) == "]":
+                        i += 1
+
+                if tok_attr(i) == "=":
+                    i += 1
+                    init_tokens = []
+                    depth = 0
+                    while i < n:
+                        a = tok_attr(i)
+                        if a in {"(", "[", "{"}:
+                            depth += 1
+                        elif a in {")", "]", "}"}:
+                            depth -= 1
+                        if depth == 0 and a in {",", ";"}:
+                            break
+                        init_tokens.append(filtered_tokens[i])
+                        i += 1
+
+                    if is_struct_type:
+                        emit_struct_initializer(type_name, var_name, array_size, init_tokens)
+                    else:
+                        rhs = emit_expr(init_tokens)
+                        if rhs is not None:
+                            ir.emit("=", rhs, "_", var_name)
+
+                if tok_attr(i) == ",":
+                    i += 1
+                    continue
+                break
+
+            if tok_attr(i) == ";":
+                i += 1
+
         def parse_statement():
             nonlocal i
             if i >= n:
@@ -594,12 +964,42 @@ class Compiler:
             cur_attr = tok_attr(i)
             cur_type = tok_type(i)
 
+            if cur_attr == "}":
+                i += 1
+                return
+
             if cur_attr == "{":
                 i += 1
                 while i < n and tok_attr(i) != "}":
                     parse_statement()
                 if tok_attr(i) == "}":
                     i += 1
+                return
+
+            if cur_attr == "struct" and tok_attr(i + 2) == "{":
+                i += 3
+                depth = 1
+                while i < n and depth > 0:
+                    if tok_attr(i) == "{":
+                        depth += 1
+                    elif tok_attr(i) == "}":
+                        depth -= 1
+                    i += 1
+                if tok_attr(i) == ";":
+                    i += 1
+                return
+
+            if cur_attr == "struct" and tok_type(i + 1) == "IDENTIFIER" and tok_attr(i + 1) in custom_type_names:
+                i += 1
+                parse_declaration(tok_attr(i), True)
+                return
+
+            if cur_type == "IDENTIFIER" and cur_attr in custom_type_names:
+                parse_declaration(cur_attr, True)
+                return
+
+            if cur_attr in type_keywords and not (tok_type(i + 1) == "IDENTIFIER" and tok_attr(i + 2) == "("):
+                parse_declaration(cur_attr, False)
                 return
 
             if cur_attr in type_keywords:
@@ -673,16 +1073,16 @@ class Compiler:
                     parse_statement()
                     return
 
-                j_false = emit_inverse_cond_jump(cond)
+                false_jumps = emit_false_jumps(cond)
                 parse_statement()
                 if tok_attr(i) == "else":
                     j_end = ir.emit("j", "_", "_", "0")
-                    patch_jump(j_false, ir.next_quad())
+                    patch_jumps(false_jumps, ir.next_quad())
                     i += 1
                     parse_statement()
                     patch_jump(j_end, ir.next_quad())
                 else:
-                    patch_jump(j_false, ir.next_quad())
+                    patch_jumps(false_jumps, ir.next_quad())
                 return
 
             if cur_attr == "while":
@@ -694,10 +1094,10 @@ class Compiler:
                     parse_statement()
                     return
 
-                j_false = emit_inverse_cond_jump(cond)
+                false_jumps = emit_false_jumps(cond)
                 parse_statement()
                 ir.emit("j", "_", "_", str(cond_start))
-                patch_jump(j_false, ir.next_quad())
+                patch_jumps(false_jumps, ir.next_quad())
                 return
 
             if cur_attr == "for":
@@ -708,18 +1108,17 @@ class Compiler:
 
                 parse_inline_assignment(sections[0])
                 cond_start = ir.next_quad()
-                j_false = -1
+                false_jumps = []
                 if sections[1]:
                     cond = parse_condition_tokens(sections[1])
                     if cond is not None:
-                        j_false = emit_inverse_cond_jump(cond)
+                        false_jumps = emit_false_jumps(cond)
 
                 i = after_cond
                 parse_statement()
                 parse_inline_assignment(sections[2])
                 ir.emit("j", "_", "_", str(cond_start))
-                if j_false >= 0:
-                    patch_jump(j_false, ir.next_quad())
+                patch_jumps(false_jumps, ir.next_quad())
                 return
 
             if cur_attr == "return":
@@ -768,7 +1167,74 @@ class Compiler:
 
         while i < n:
             parse_statement()
-    
+
+    def _collect_struct_defs(self, tokens: List) -> dict:
+        """Collect struct member order for simple aggregate initializers."""
+        from constants import TYPES
+
+        defs = {}
+        i = 0
+        while i < len(tokens):
+            if TYPES.get(tokens[i].type, "") != "KEYWORD" or tokens[i].attribute != "struct":
+                i += 1
+                continue
+
+            if i + 2 >= len(tokens) or TYPES.get(tokens[i + 1].type, "") != "IDENTIFIER" or tokens[i + 2].attribute != "{":
+                i += 1
+                continue
+
+            struct_name = tokens[i + 1].attribute
+            members = []
+            i += 3
+            depth = 1
+            while i < len(tokens) and depth > 0:
+                attr = tokens[i].attribute
+                if attr == "{":
+                    depth += 1
+                    i += 1
+                    continue
+                if attr == "}":
+                    depth -= 1
+                    i += 1
+                    continue
+
+                if depth == 1:
+                    if TYPES.get(tokens[i].type, "") == "KEYWORD" and tokens[i].attribute in {
+                        "int", "float", "double", "char"
+                    }:
+                        i += 1
+                        while i < len(tokens) and tokens[i].attribute == "*":
+                            i += 1
+                        if i < len(tokens) and TYPES.get(tokens[i].type, "") == "IDENTIFIER":
+                            members.append(tokens[i].attribute)
+                    while i < len(tokens) and tokens[i].attribute not in {";", "}"}:
+                        i += 1
+                    if i < len(tokens) and tokens[i].attribute == ";":
+                        i += 1
+                    continue
+
+                i += 1
+
+            defs[struct_name] = members
+
+        return defs
+
+    def _collect_object_macros(self, tokens: List) -> dict:
+        """Collect simple object-like #define constants, such as '#define MAX 5'."""
+        from constants import TYPES
+
+        macros = {}
+        for token in tokens:
+            if TYPES.get(token.type, "") != "PREPROCESSOR":
+                continue
+            parts = token.attribute.strip().split()
+            if len(parts) >= 3 and parts[0] == "#define":
+                name = parts[1]
+                value = parts[2]
+                if name.isidentifier():
+                    macros[name] = value
+        return macros
+     
     def save_assembly(self, filename: str) -> str:
         """保存汇编代码到文件"""
         if self.code_generator and self.result.assembly_code:
