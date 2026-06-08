@@ -6,19 +6,20 @@ PROGRAM  @1
 |   `-- FIELD_DECL  "score"  @7  [type: int[5]]  [comment: 成绩]
 `-- FUNC_DEF  "main"  @10
     |-- TYPE_SPEC  "int"  @10
-    `-- COMPOUND_STMT
-        |-- VAR_DECL  "i"  @11
+    `-- COMPOUND_STMT  @10
+        |-- VAR_DECL  "i"  @11  [type: int]
         |   |-- TYPE_SPEC  "int"  @11
         |   `-- LITERAL_INT  "0"  @11  [type: int]
-        |-- VAR_DECL  "max"  @12
+        |-- VAR_DECL  "max"  @12  [type: int]
         |   |-- TYPE_SPEC  "int"  @12
         |   `-- LITERAL_INT  "0"  @12  [type: int]
         |-- VAR_DECL  "Li"  @13  [type: struct student]
-        |   |-- INIT_FIELD  "name"  @13
+        |   |-- TYPE_SPEC  "struct student"  @13
+        |   |-- INIT_FIELD  "name"  @13  [type: char*]
         |   |   `-- LITERAL_STRING  "Li ping"  @13  [type: char*]
-        |   |-- INIT_FIELD  "num"  @13
+        |   |-- INIT_FIELD  "num"  @13  [type: int]
         |   |   `-- LITERAL_INT  "5"  @13  [type: int]
-        |   |-- INIT_FIELD  "age"  @13
+        |   |-- INIT_FIELD  "age"  @13  [type: int]
         |   |   `-- LITERAL_INT  "18"  @13  [type: int]
         |   `-- INIT_FIELD  "score"  @13  [type: int[5]]
         |       |-- LITERAL_INT  "80"  @13  [type: int]
@@ -26,32 +27,32 @@ PROGRAM  @1
         |       |-- LITERAL_INT  "100"  @13  [type: int]
         |       |-- LITERAL_INT  "86"  @13  [type: int]
         |       `-- LITERAL_INT  "95"  @13  [type: int]
-        |-- WHILE_STMT  @15  [backpatch: false -> quad 18]
+        |-- WHILE_STMT  @15  [control: while(i < 5)]  [false -> quad 18: exit loop]
         |   |-- BINARY_EXPR  op=<  @15  [type: int]
         |   |   |-- IDENTIFIER  "i"  @15  [type: int]  [symbol: i]  [offset: -2]  [lvalue]
         |   |   `-- LITERAL_INT  "5"  @15  [type: int]
-        |   `-- COMPOUND_STMT  [loop_back -> quad 10]
-        |       |-- IF_STMT  @16  [backpatch: false -> quad 15]
+        |   `-- COMPOUND_STMT  @15  [loop_body: execute nested statements, then jump back to while condition]  [loop_back -> quad 10]
+        |       |-- IF_STMT  @16  [control: if(Li.score[i] > max)]  [false -> quad 15: skip then]
         |       |   |-- BINARY_EXPR  op=>  @16  [type: int]
         |       |   |   |-- ARRAY_SUBSCRIPT  @16  [type: int]  [lvalue]
         |       |   |   |   |-- MEMBER_EXPR  ".score"  @16  [type: int[5]]
-        |       |   |   |   |   `-- IDENTIFIER  "Li"  @16  [type: struct student]  [symbol: Li]  [lvalue]
+        |       |   |   |   |   `-- IDENTIFIER  "Li"  @16  [type: struct student]  [symbol: Li]  [offset: -6]  [lvalue]
         |       |   |   |   `-- IDENTIFIER  "i"  @16  [type: int]  [symbol: i]  [offset: -2]  [lvalue]
         |       |   |   `-- IDENTIFIER  "max"  @16  [type: int]  [symbol: max]  [offset: -4]  [lvalue]
-        |       |   `-- COMPOUND_STMT
+        |       |   `-- COMPOUND_STMT  @16
         |       |       `-- EXPR_STMT  @17
         |       |           `-- ASSIGN_EXPR  op==  @17  [type: int]
         |       |               |-- IDENTIFIER  "max"  @17  [type: int]  [symbol: max]  [offset: -4]  [lvalue]
-        |       |               `-- ARRAY_SUBSCRIPT  @17  [type: int]
+        |       |               `-- ARRAY_SUBSCRIPT  @17  [type: int]  [lvalue]
         |       |                   |-- MEMBER_EXPR  ".score"  @17  [type: int[5]]
-        |       |                   |   `-- IDENTIFIER  "Li"  @17  [type: struct student]  [symbol: Li]  [lvalue]
+        |       |                   |   `-- IDENTIFIER  "Li"  @17  [type: struct student]  [symbol: Li]  [offset: -6]  [lvalue]
         |       |                   `-- IDENTIFIER  "i"  @17  [type: int]  [symbol: i]  [offset: -2]  [lvalue]
         |       `-- EXPR_STMT  @19
         |           `-- UNARY_EXPR  op=++  @19  [type: int]
         |               `-- IDENTIFIER  "i"  @19  [type: int]  [symbol: i]  [offset: -2]  [lvalue]
         |-- EXPR_STMT  @22
-        |   `-- FUNC_CALL  "printf"  @22  [type: void]
+        |   `-- FUNC_CALL  "printf"  @22  [type: int]
         |       |-- LITERAL_STRING  "%d"  @22  [type: char*]
-        |       `-- IDENTIFIER  "max"  @22  [type: int]  [symbol: max]  [offset: -4]
+        |       `-- IDENTIFIER  "max"  @22  [type: int]  [symbol: max]  [offset: -4]  [lvalue]
         `-- RETURN_STMT  @23
             `-- LITERAL_INT  "0"  @23  [type: int]

@@ -55,6 +55,7 @@ class Compiler:
         self.semantic_analyzer: Optional[SemanticAnalyzer] = None
         self.ir_generator: Optional[IRGenerator] = None
         self.code_generator: Optional[CodeGenerator] = None
+        self.source_code = ""
         self.result = CompilerResult()
     
     def compile(self, source_code: str, verbose: bool = True) -> CompilerResult:
@@ -70,6 +71,7 @@ class Compiler:
         """
         self.result = CompilerResult()
         source_code = self._normalize_source(source_code)
+        self.source_code = source_code
         
         try:
             # 1. 词法分析
@@ -1265,74 +1267,493 @@ class Compiler:
         return defs
 
     def _generate_annotated_syntax_tree(self) -> str:
-        """生成 while-if 回填题需要的带注释语法树文本。"""
-        lines = [
-            "PROGRAM  @1",
-            "|-- STRUCT_DECL  \"student\"  @3",
-            "|   |-- FIELD_DECL  \"name\"  @4  [type: char*]  [comment: 姓名]",
-            "|   |-- FIELD_DECL  \"num\"  @5  [type: int]  [comment: 学号]",
-            "|   |-- FIELD_DECL  \"age\"  @6  [type: int]  [comment: 年龄]",
-            "|   `-- FIELD_DECL  \"score\"  @7  [type: int[5]]  [comment: 成绩]",
-            "`-- FUNC_DEF  \"main\"  @10",
-            "    |-- TYPE_SPEC  \"int\"  @10",
-            "    `-- COMPOUND_STMT",
-            "        |-- VAR_DECL  \"i\"  @11",
-            "        |   |-- TYPE_SPEC  \"int\"  @11",
-            "        |   `-- LITERAL_INT  \"0\"  @11  [type: int]",
-            "        |-- VAR_DECL  \"max\"  @12",
-            "        |   |-- TYPE_SPEC  \"int\"  @12",
-            "        |   `-- LITERAL_INT  \"0\"  @12  [type: int]",
-            "        |-- VAR_DECL  \"Li\"  @13  [type: struct student]",
-            "        |   |-- INIT_FIELD  \"name\"  @13",
-            "        |   |   `-- LITERAL_STRING  \"Li ping\"  @13  [type: char*]",
-            "        |   |-- INIT_FIELD  \"num\"  @13",
-            "        |   |   `-- LITERAL_INT  \"5\"  @13  [type: int]",
-            "        |   |-- INIT_FIELD  \"age\"  @13",
-            "        |   |   `-- LITERAL_INT  \"18\"  @13  [type: int]",
-            "        |   `-- INIT_FIELD  \"score\"  @13  [type: int[5]]",
-            "        |       |-- LITERAL_INT  \"80\"  @13  [type: int]",
-            "        |       |-- LITERAL_INT  \"90\"  @13  [type: int]",
-            "        |       |-- LITERAL_INT  \"100\"  @13  [type: int]",
-            "        |       |-- LITERAL_INT  \"86\"  @13  [type: int]",
-            "        |       `-- LITERAL_INT  \"95\"  @13  [type: int]",
-            "        |-- WHILE_STMT  @15  [backpatch: false -> quad 18]",
-            "        |   |-- BINARY_EXPR  op=<  @15  [type: int]",
-            "        |   |   |-- IDENTIFIER  \"i\"  @15  [type: int]  [symbol: i]  [offset: -2]  [lvalue]",
-            "        |   |   `-- LITERAL_INT  \"5\"  @15  [type: int]",
-            "        |   `-- COMPOUND_STMT  [loop_back -> quad 10]",
-            "        |       |-- IF_STMT  @16  [backpatch: false -> quad 15]",
-            "        |       |   |-- BINARY_EXPR  op=>  @16  [type: int]",
-            "        |       |   |   |-- ARRAY_SUBSCRIPT  @16  [type: int]  [lvalue]",
-            "        |       |   |   |   |-- MEMBER_EXPR  \".score\"  @16  [type: int[5]]",
-            "        |       |   |   |   |   `-- IDENTIFIER  \"Li\"  @16  [type: struct student]  [symbol: Li]  [lvalue]",
-            "        |       |   |   |   `-- IDENTIFIER  \"i\"  @16  [type: int]  [symbol: i]  [offset: -2]  [lvalue]",
-            "        |       |   |   `-- IDENTIFIER  \"max\"  @16  [type: int]  [symbol: max]  [offset: -4]  [lvalue]",
-            "        |       |   `-- COMPOUND_STMT",
-            "        |       |       `-- EXPR_STMT  @17",
-            "        |       |           `-- ASSIGN_EXPR  op==  @17  [type: int]",
-            "        |       |               |-- IDENTIFIER  \"max\"  @17  [type: int]  [symbol: max]  [offset: -4]  [lvalue]",
-            "        |       |               `-- ARRAY_SUBSCRIPT  @17  [type: int]",
-            "        |       |                   |-- MEMBER_EXPR  \".score\"  @17  [type: int[5]]",
-            "        |       |                   |   `-- IDENTIFIER  \"Li\"  @17  [type: struct student]  [symbol: Li]  [lvalue]",
-            "        |       |                   `-- IDENTIFIER  \"i\"  @17  [type: int]  [symbol: i]  [offset: -2]  [lvalue]",
-            "        |       `-- EXPR_STMT  @19",
-            "        |           `-- UNARY_EXPR  op=++  @19  [type: int]",
-            "        |               `-- IDENTIFIER  \"i\"  @19  [type: int]  [symbol: i]  [offset: -2]  [lvalue]",
-            "        |-- EXPR_STMT  @22",
-            "        |   `-- FUNC_CALL  \"printf\"  @22  [type: void]",
-            "        |       |-- LITERAL_STRING  \"%d\"  @22  [type: char*]",
-            "        |       `-- IDENTIFIER  \"max\"  @22  [type: int]  [symbol: max]  [offset: -4]",
-            "        `-- RETURN_STMT  @23",
-            "            `-- LITERAL_INT  \"0\"  @23  [type: int]",
+        """Build an annotated AST text from the current token stream."""
+        from constants import TYPES
+
+        class Node:
+            def __init__(self, label, children=None):
+                self.label = label
+                self.children = children or []
+
+        tokens = [
+            t for t in self.result.tokens
+            if TYPES.get(t.type, "") not in {"PREPROCESSOR", "EOF"} and t.attribute != "const"
         ]
-        return "\n".join(lines)
+        n = len(tokens)
+        comments_by_line = {}
+        for line_no, line in enumerate(self.source_code.splitlines(), 1):
+            if "//" in line:
+                comments_by_line[line_no] = line.split("//", 1)[1].strip()
+
+        struct_defs = {}
+        env_stack = [{}]
+        next_offset = [-2]
+        quads = self.ir_generator.quadruples if self.ir_generator else []
+        while_false_targets = []
+        if_false_targets = []
+        loop_back_targets = []
+        for qidx, quad in enumerate(quads):
+            if quad.op == "j" and quad.result.isdigit() and int(quad.result) <= qidx:
+                loop_back_targets.append((qidx, int(quad.result)))
+            elif quad.op.startswith("j") and quad.op != "j" and quad.result.isdigit():
+                has_loop_back = any(q.op == "j" and q.result == str(qidx) for q in quads)
+                if has_loop_back:
+                    while_false_targets.append((qidx, int(quad.result)))
+                else:
+                    if_false_targets.append((qidx, int(quad.result)))
+
+        def ttype(idx):
+            if 0 <= idx < n:
+                return TYPES.get(tokens[idx].type, "")
+            return ""
+
+        def attr(idx):
+            if 0 <= idx < n:
+                return tokens[idx].attribute
+            return ""
+
+        def line(idx):
+            if 0 <= idx < n:
+                return tokens[idx].line
+            return 0
+
+        def split_top_level(token_list, delimiter=","):
+            parts, cur, depth = [], [], 0
+            for tk in token_list:
+                a = tk.attribute
+                if a in {"(", "[", "{"}:
+                    depth += 1
+                    cur.append(tk)
+                elif a in {")", "]", "}"}:
+                    depth -= 1
+                    cur.append(tk)
+                elif a == delimiter and depth == 0:
+                    parts.append(cur)
+                    cur = []
+                else:
+                    cur.append(tk)
+            parts.append(cur)
+            return parts
+
+        def strip_outer_braces(token_list):
+            if len(token_list) >= 2 and token_list[0].attribute == "{" and token_list[-1].attribute == "}":
+                return token_list[1:-1]
+            return token_list
+
+        def tokens_text(token_list):
+            return " ".join(t.attribute for t in token_list).replace(" . ", ".").replace(" [ ", "[").replace(" ]", "]")
+
+        def parse_type_at(idx):
+            if attr(idx) == "struct" and ttype(idx + 1) == "IDENTIFIER":
+                return f"struct {attr(idx + 1)}", idx + 2
+
+            if ttype(idx) == "KEYWORD" and attr(idx) in {
+                "int", "float", "double", "char", "void", "long", "short", "signed", "unsigned"
+            }:
+                base = attr(idx)
+                idx += 1
+                pointer = 0
+                while attr(idx) == "*":
+                    pointer += 1
+                    idx += 1
+                return base + ("*" * pointer), idx
+
+            if ttype(idx) == "IDENTIFIER" and attr(idx) in struct_defs:
+                return f"struct {attr(idx)}", idx + 1
+
+            return None, idx
+
+        def array_type(base_type, dims):
+            out = base_type
+            for dim in dims:
+                out += f"[{dim}]"
+            return out
+
+        def add_symbol(name, type_name):
+            env_stack[-1][name] = {"type": type_name, "offset": next_offset[0]}
+            next_offset[0] -= 2
+
+        def lookup_symbol(name):
+            for env in reversed(env_stack):
+                if name in env:
+                    return env[name]
+            return None
+
+        def parse_declarator(idx):
+            pointer = 0
+            while attr(idx) == "*":
+                pointer += 1
+                idx += 1
+            if ttype(idx) != "IDENTIFIER":
+                return None, idx
+            name = attr(idx)
+            decl_line = line(idx)
+            idx += 1
+            dims = []
+            while attr(idx) == "[":
+                idx += 1
+                dim = attr(idx) if ttype(idx) in {"CONST_DECIMAL", "CONST_OCTAL", "CONST_HEX"} else ""
+                if dim:
+                    dims.append(int(dim, 0))
+                while idx < n and attr(idx) != "]":
+                    idx += 1
+                if attr(idx) == "]":
+                    idx += 1
+            return {"name": name, "line": decl_line, "pointer": pointer, "dims": dims}, idx
+
+        def expr_type(node_label):
+            marker = "[type: "
+            if marker not in node_label:
+                return "int"
+            return node_label.split(marker, 1)[1].split("]", 1)[0]
+
+        def identifier_node(name, at_line, lvalue=True, include_offset=True):
+            sym = lookup_symbol(name)
+            if sym:
+                parts = [f'IDENTIFIER  "{name}"  @{at_line}', f"[type: {sym['type']}]", f"[symbol: {name}]"]
+                if include_offset:
+                    parts.append(f"[offset: {sym['offset']}]")
+                if lvalue:
+                    parts.append("[lvalue]")
+                return Node("  ".join(parts))
+            return Node(f'IDENTIFIER  "{name}"  @{at_line}')
+
+        def literal_node(tk):
+            tk_type = TYPES.get(tk.type, "")
+            if tk_type in {"CONST_DECIMAL", "CONST_OCTAL", "CONST_HEX"}:
+                return Node(f'LITERAL_INT  "{tk.attribute}"  @{tk.line}  [type: int]')
+            if tk_type == "CONST_FLOAT":
+                return Node(f'LITERAL_FLOAT  "{tk.attribute}"  @{tk.line}  [type: float]')
+            if tk_type == "CONST_CHAR":
+                return Node(f'LITERAL_CHAR  "{tk.attribute}"  @{tk.line}  [type: char]')
+            if tk_type == "STRING_LITERAL":
+                return Node(f'LITERAL_STRING  "{tk.attribute}"  @{tk.line}  [type: char*]')
+            return Node(f'UNKNOWN_LITERAL  "{tk.attribute}"  @{tk.line}')
+
+        def parse_postfix(token_list):
+            if not token_list:
+                return Node("EMPTY_EXPR")
+            if len(token_list) == 1:
+                tk = token_list[0]
+                if TYPES.get(tk.type, "") == "IDENTIFIER":
+                    return identifier_node(tk.attribute, tk.line)
+                return literal_node(tk)
+
+            if TYPES.get(token_list[0].type, "") == "IDENTIFIER":
+                base = identifier_node(token_list[0].attribute, token_list[0].line)
+                base_type = expr_type(base.label)
+                idx = 1
+                cur = base
+                cur_type = base_type
+                while idx < len(token_list):
+                    a = token_list[idx].attribute
+                    if a == "." and idx + 1 < len(token_list):
+                        member = token_list[idx + 1].attribute
+                        member_type = "int"
+                        if cur_type.startswith("struct "):
+                            sname = cur_type.split(" ", 1)[1]
+                            for field in struct_defs.get(sname, []):
+                                if field["name"] == member:
+                                    member_type = array_type(field["type"], field["dims"])
+                                    break
+                        cur = Node(f'MEMBER_EXPR  ".{member}"  @{token_list[idx].line}  [type: {member_type}]', [cur])
+                        cur_type = member_type
+                        idx += 2
+                        continue
+
+                    if a == "[":
+                        depth = 1
+                        start = idx + 1
+                        idx += 1
+                        while idx < len(token_list) and depth > 0:
+                            if token_list[idx].attribute == "[":
+                                depth += 1
+                            elif token_list[idx].attribute == "]":
+                                depth -= 1
+                            idx += 1
+                        index_tokens = token_list[start:idx - 1]
+                        elem_type = cur_type.rsplit("[", 1)[0] if "[" in cur_type else cur_type
+                        cur = Node(f"ARRAY_SUBSCRIPT  @{token_list[start - 1].line}  [type: {elem_type}]  [lvalue]", [
+                            cur,
+                            parse_expr(index_tokens),
+                        ])
+                        cur_type = elem_type
+                        continue
+
+                    if a == "(":
+                        args = []
+                        inside = token_list[idx + 1:-1]
+                        for part in split_top_level(inside):
+                            if part:
+                                args.append(parse_expr(part))
+                        ret_type = "int" if token_list[0].attribute == "printf" else "void"
+                        cur = Node(f'FUNC_CALL  "{token_list[0].attribute}"  @{token_list[0].line}  [type: {ret_type}]', args)
+                        return cur
+
+                    break
+                return cur
+
+            return Node(" ".join(t.attribute for t in token_list))
+
+        def parse_expr(token_list):
+            if not token_list:
+                return Node("EMPTY_EXPR")
+
+            depth = 0
+            for ops in ({"=", "+=", "-="}, {"||"}, {"&&"}, {"==", "!="}, {"<", ">", "<=", ">="}, {"+", "-"}, {"*", "/", "%"}):
+                scan = range(len(token_list) - 1, -1, -1) if ops not in ({"=", "+=", "-="},) else range(len(token_list))
+                for idx in scan:
+                    a = token_list[idx].attribute
+                    if a in {")", "]", "}"}:
+                        depth += 1
+                    elif a in {"(", "[", "{"}:
+                        depth -= 1
+                    elif depth == 0 and a in ops:
+                        left = parse_expr(token_list[:idx])
+                        right = parse_expr(token_list[idx + 1:])
+                        if a in {"=", "+=", "-="}:
+                            return Node(f"ASSIGN_EXPR  op={a}  @{token_list[idx].line}  [type: {expr_type(right.label)}]", [left, right])
+                        return Node(f"BINARY_EXPR  op={a}  @{token_list[idx].line}  [type: int]", [left, right])
+
+            if len(token_list) == 2 and token_list[1].attribute in {"++", "--"}:
+                return Node(f"UNARY_EXPR  op={token_list[1].attribute}  @{token_list[1].line}  [type: int]", [
+                    parse_expr([token_list[0]])
+                ])
+            return parse_postfix(token_list)
+
+        def find_matching(idx, left="{", right="}"):
+            depth = 0
+            while idx < n:
+                if attr(idx) == left:
+                    depth += 1
+                elif attr(idx) == right:
+                    depth -= 1
+                    if depth == 0:
+                        return idx
+                idx += 1
+            return n - 1
+
+        def parse_parenthesized(idx):
+            if attr(idx) != "(":
+                return [], idx
+            end = find_matching(idx, "(", ")")
+            return tokens[idx + 1:end], end + 1
+
+        def collect_until(idx, stops):
+            start, depth = idx, 0
+            while idx < n:
+                a = attr(idx)
+                if a in {"(", "[", "{"}:
+                    depth += 1
+                elif a in {")", "]", "}"}:
+                    depth -= 1
+                elif depth == 0 and a in stops:
+                    break
+                idx += 1
+            return tokens[start:idx], idx
+
+        def parse_initializer(base_type, dims, init_tokens, at_line, field_names=None):
+            init_tokens = strip_outer_braces(init_tokens)
+            if field_names:
+                children = []
+                parts = split_top_level(init_tokens)
+                for field, part in zip(field_names, parts):
+                    field_type = array_type(field["type"], field["dims"])
+                    children.append(Node(f'INIT_FIELD  "{field["name"]}"  @{at_line}  [type: {field_type}]',
+                                         parse_initializer(field["type"], field["dims"], part, at_line).children or [parse_expr(strip_outer_braces(part))]))
+                return Node("INIT_LIST", children)
+
+            if dims:
+                children = [parse_expr(strip_outer_braces(part)) for part in split_top_level(init_tokens) if part]
+                return Node("INIT_LIST", children)
+            return parse_expr(init_tokens)
+
+        def parse_declaration(idx):
+            type_name, after_type = parse_type_at(idx)
+            if type_name is None:
+                return None, idx + 1
+            children = []
+            idx = after_type
+            while idx < n and attr(idx) != ";":
+                decl, idx = parse_declarator(idx)
+                if not decl:
+                    idx += 1
+                    continue
+                full_type = array_type(type_name + ("*" * decl["pointer"]), decl["dims"])
+                add_symbol(decl["name"], full_type)
+                node_children = [Node(f'TYPE_SPEC  "{full_type}"  @{decl["line"]}')]
+                if attr(idx) == "=":
+                    init_tokens, idx = collect_until(idx + 1, {",", ";"})
+                    field_names = None
+                    if type_name.startswith("struct "):
+                        field_names = struct_defs.get(type_name.split(" ", 1)[1], [])
+                    init_node = parse_initializer(type_name, decl["dims"], init_tokens, decl["line"], field_names)
+                    if init_node.label == "INIT_LIST":
+                        node_children.extend(init_node.children)
+                    else:
+                        node_children.append(init_node)
+                children.append(Node(f'VAR_DECL  "{decl["name"]}"  @{decl["line"]}  [type: {full_type}]', node_children))
+                if attr(idx) == ",":
+                    idx += 1
+                    continue
+                break
+            if attr(idx) == ";":
+                idx += 1
+            return children, idx
+
+        def parse_statement(idx):
+            if idx >= n:
+                return None, idx
+            a = attr(idx)
+            if a == "{":
+                return parse_block(idx)
+            if a == "while":
+                cond, after_cond = parse_parenthesized(idx + 1)
+                body, next_idx = parse_statement(after_cond)
+                false_info = while_false_targets.pop(0) if while_false_targets else None
+                loop_info = loop_back_targets.pop(0) if loop_back_targets else None
+                label = f"WHILE_STMT  @{line(idx)}  [control: while({tokens_text(cond)})]"
+                if false_info:
+                    label += f"  [false -> quad {false_info[1]}: exit loop]"
+                if body and body.label.startswith("COMPOUND_STMT"):
+                    body.label += "  [loop_body: execute nested statements, then jump back to while condition]"
+                    if loop_info:
+                        body.label += f"  [loop_back -> quad {loop_info[1]}]"
+                return Node(label, [parse_expr(cond), body]), next_idx
+            if a == "if":
+                cond, after_cond = parse_parenthesized(idx + 1)
+                body, next_idx = parse_statement(after_cond)
+                children = [parse_expr(cond), body]
+                if attr(next_idx) == "else":
+                    else_body, next_idx = parse_statement(next_idx + 1)
+                    children.append(else_body)
+                false_info = if_false_targets.pop(0) if if_false_targets else None
+                label = f"IF_STMT  @{line(idx)}  [control: if({tokens_text(cond)})]"
+                if false_info:
+                    label += f"  [false -> quad {false_info[1]}: skip then]"
+                return Node(label, children), next_idx
+            if a == "return":
+                expr_tokens, next_idx = collect_until(idx + 1, {";"})
+                children = [parse_expr(expr_tokens)] if expr_tokens else []
+                if attr(next_idx) == ";":
+                    next_idx += 1
+                return Node(f"RETURN_STMT  @{line(idx)}", children), next_idx
+            type_name, _ = parse_type_at(idx)
+            if type_name is not None and not (ttype(idx + 1) == "IDENTIFIER" and attr(idx + 2) == "("):
+                decl_nodes, next_idx = parse_declaration(idx)
+                if len(decl_nodes) == 1:
+                    return decl_nodes[0], next_idx
+                return Node("DECL_STMT", decl_nodes), next_idx
+            expr_tokens, next_idx = collect_until(idx, {";"})
+            if attr(next_idx) == ";":
+                next_idx += 1
+            return Node(f"EXPR_STMT  @{line(idx)}", [parse_expr(expr_tokens)]), next_idx
+
+        def parse_block(idx):
+            block_line = line(idx)
+            idx += 1
+            children = []
+            while idx < n and attr(idx) != "}":
+                node, idx = parse_statement(idx)
+                if node:
+                    children.append(node)
+            if attr(idx) == "}":
+                idx += 1
+            return Node(f"COMPOUND_STMT  @{block_line}", children), idx
+
+        def parse_struct_decl(idx):
+            name = attr(idx + 1)
+            decl_line = line(idx)
+            idx += 3
+            fields = []
+            child_nodes = []
+            while idx < n and attr(idx) != "}":
+                field_type, after_type = parse_type_at(idx)
+                if field_type is None:
+                    idx += 1
+                    continue
+                decl, idx2 = parse_declarator(after_type)
+                if decl:
+                    full_type = array_type(field_type + ("*" * decl["pointer"]), decl["dims"])
+                    comment = comments_by_line.get(decl["line"], "")
+                    label = f'FIELD_DECL  "{decl["name"]}"  @{decl["line"]}  [type: {full_type}]'
+                    if comment:
+                        label += f"  [comment: {comment}]"
+                    child_nodes.append(Node(label))
+                    fields.append({"name": decl["name"], "type": field_type + ("*" * decl["pointer"]), "dims": decl["dims"]})
+                idx = idx2
+                while idx < n and attr(idx) != ";":
+                    idx += 1
+                if attr(idx) == ";":
+                    idx += 1
+            struct_defs[name] = fields
+            while idx < n and attr(idx) != ";":
+                idx += 1
+            return Node(f'STRUCT_DECL  "{name}"  @{decl_line}', child_nodes), idx + 1
+
+        def parse_function(idx):
+            ret_type, after_type = parse_type_at(idx)
+            if ret_type is None or ttype(after_type) != "IDENTIFIER" or attr(after_type + 1) != "(":
+                return None, idx
+            name = attr(after_type)
+            fn_line = line(after_type)
+            _, after_params = parse_parenthesized(after_type + 1)
+            env_stack.append({})
+            next_offset[0] = -2
+            body = None
+            if attr(after_params) == "{":
+                body, next_idx = parse_block(after_params)
+            else:
+                next_idx = after_params
+            env_stack.pop()
+            return Node(f'FUNC_DEF  "{name}"  @{fn_line}', [
+                Node(f'TYPE_SPEC  "{ret_type}"  @{line(idx)}'),
+                body or Node("COMPOUND_STMT"),
+            ]), next_idx
+
+        root = Node("PROGRAM  @1", [])
+        i = 0
+        while i < n:
+            if attr(i) == "struct" and ttype(i + 1) == "IDENTIFIER" and attr(i + 2) == "{":
+                node, i = parse_struct_decl(i)
+                root.children.append(node)
+                continue
+            fn_node, next_i = parse_function(i)
+            if fn_node:
+                root.children.append(fn_node)
+                i = next_i
+                continue
+            i += 1
+
+        def render(node):
+            lines = [node.label]
+
+            def walk(children, prefix):
+                for idx, child in enumerate(children):
+                    last = idx == len(children) - 1
+                    connector = "`-- " if last else "|-- "
+                    lines.append(prefix + connector + child.label)
+                    walk(child.children, prefix + ("    " if last else "|   "))
+
+            walk(node.children, "")
+            return "\n".join(lines)
+
+        return render(root)
 
     def _generate_backpatch_report(self) -> str:
         """生成控制流回填检查说明。"""
+        from constants import TYPES
+
         quads = self.ir_generator.quadruples if self.ir_generator else []
+        controls = []
+        for token in self.result.tokens:
+            if TYPES.get(token.type, "") == "KEYWORD" and token.attribute in {"while", "if", "for"}:
+                controls.append(token.attribute)
+        control_summary = " -> ".join(dict.fromkeys(controls)) if controls else "none"
         lines = [
             "BACKPATCH_CHECK",
-            "本题第4组：while(){ if(){} }",
+            "GROUP: 第4组 while(){ if(){} }",
+            f"CONTROL_FLOW: {control_summary}",
             "",
             "QUADRUPLES",
         ]
@@ -1352,13 +1773,26 @@ class Compiler:
                 note = "    ; 数组取值"
             lines.append(f"{idx:4d}: {quad.to_readable()}{note}")
 
-        lines.extend([
-            "",
-            "BACKPATCH_LISTS",
-            "while.false_list = {10} -> 回填到 quad 18",
-            "if.false_list    = {12} -> 回填到 quad 15",
-            "while.loop_back  = quad 17 -> 跳回 quad 10",
-        ])
+        while_false = []
+        if_false = []
+        loop_back = []
+        for idx, quad in enumerate(quads):
+            if quad.op == "j" and quad.result.isdigit() and int(quad.result) <= idx:
+                loop_back.append((idx, int(quad.result)))
+            elif quad.op.startswith("j") and quad.op != "j" and quad.result.isdigit():
+                has_loop_back = any(q.op == "j" and q.result == str(idx) for q in quads)
+                if has_loop_back:
+                    while_false.append((idx, int(quad.result)))
+                else:
+                    if_false.append((idx, int(quad.result)))
+
+        lines.extend(["", "BACKPATCH_LISTS"])
+        for idx, target in while_false:
+            lines.append(f"while.false_list = {{{idx}}} -> 回填到 quad {target}")
+        for idx, target in if_false:
+            lines.append(f"if.false_list    = {{{idx}}} -> 回填到 quad {target}")
+        for idx, target in loop_back:
+            lines.append(f"while.loop_back  = quad {idx} -> 跳回 quad {target}")
         return "\n".join(lines)
 
     def _collect_object_macros(self, tokens: List) -> dict:

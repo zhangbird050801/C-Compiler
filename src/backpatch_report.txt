@@ -1,5 +1,6 @@
 BACKPATCH_CHECK
-本题第4组：while(){ if(){} }
+GROUP: 第4组 while(){ if(){} }
+CONTROL_FLOW: while -> if
 
 QUADRUPLES
    0: i = 0
