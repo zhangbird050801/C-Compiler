@@ -204,6 +204,7 @@ class LexerApp(tk.Tk):
 
         # Tab 7: 题目2 注释语法树
         self.annotated_tree_tab = scrolledtext.ScrolledText(self.notebook, wrap=tk.NONE, font=self.text_font, state='disabled')
+        self.annotated_tree_tab.tag_configure("control_flow", foreground="#c00000")
         self.notebook.add(self.annotated_tree_tab, text=" 注释语法树 ")
 
         # Tab 8: 回填检查
@@ -404,6 +405,7 @@ class LexerApp(tk.Tk):
                 self.annotated_tree_tab.config(state='normal')
                 self.annotated_tree_tab.delete("1.0", tk.END)
                 self.annotated_tree_tab.insert("1.0", result.annotated_syntax_tree)
+                self.apply_ast_highlights()
                 self.annotated_tree_tab.config(state='disabled')
 
                 self.backpatch_tab.config(state='normal')
@@ -416,6 +418,7 @@ class LexerApp(tk.Tk):
                 masm_asm = output_dir / "c-code.asm"
                 output_ir = output_dir / "output.ir"
                 annotated_tree = output_dir / "annotated_syntax_tree.txt"
+                annotated_tree_html = output_dir / "annotated_syntax_tree.html"
                 backpatch_report = output_dir / "backpatch_report.txt"
                 output_asm.write_text(result.assembly_code, encoding="utf-8")
                 masm_asm.write_text(result.assembly_code, encoding="utf-8")
@@ -423,6 +426,7 @@ class LexerApp(tk.Tk):
                     f"{idx:4d}  {quad.to_readable()}" for idx, quad in enumerate(result.quadruples)
                 ), encoding="utf-8")
                 annotated_tree.write_text(result.annotated_syntax_tree, encoding="utf-8")
+                annotated_tree_html.write_text(self.ast_to_html(result.annotated_syntax_tree), encoding="utf-8")
                 backpatch_report.write_text(result.backpatch_report, encoding="utf-8")
                 
                 # 切换到语义分析选项卡
@@ -435,6 +439,7 @@ class LexerApp(tk.Tk):
                     f"- 生成 {len(result.quadruples)} 条四元式\n"
                     f"- 生成 {len(result.assembly_code.split(chr(10)))} 行汇编代码\n"
                     f"- 已保存注释语法树 annotated_syntax_tree.txt\n"
+                    f"- 已保存彩色语法树 annotated_syntax_tree.html\n"
                     f"- 已保存回填检查 backpatch_report.txt")
             else:
                 error_msg = "\n".join(result.errors[:5])
@@ -444,6 +449,47 @@ class LexerApp(tk.Tk):
             messagebox.showerror("错误", f"编译器内部错误：\n{str(e)}")
             import traceback
             traceback.print_exc()
+
+    def apply_ast_highlights(self):
+        """Highlight while/if control-flow lines in the annotated AST tab."""
+        self.annotated_tree_tab.tag_remove("control_flow", "1.0", tk.END)
+        keywords = ("WHILE_STMT", "IF_STMT", "[control:", "[false ->", "[loop_body:", "[loop_back ->")
+        line_count = int(self.annotated_tree_tab.index("end-1c").split(".")[0])
+        for line_no in range(1, line_count + 1):
+            line_start = f"{line_no}.0"
+            line_end = f"{line_no}.end"
+            text = self.annotated_tree_tab.get(line_start, line_end)
+            if any(keyword in text for keyword in keywords):
+                self.annotated_tree_tab.tag_add("control_flow", line_start, line_end)
+
+    def ast_to_html(self, ast_text):
+        """Create an HTML copy with while/if control-flow lines highlighted."""
+        import html
+
+        keywords = ("WHILE_STMT", "IF_STMT", "[control:", "[false ->", "[loop_body:", "[loop_back ->")
+        body_lines = []
+        for line in ast_text.splitlines():
+            escaped = html.escape(line)
+            if any(keyword in line for keyword in keywords):
+                body_lines.append(f'<span class="control">{escaped}</span>')
+            else:
+                body_lines.append(escaped)
+
+        return """<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+body { font-family: NSimSun, SimSun, "Microsoft YaHei UI", monospace; }
+pre { font-size: 15px; line-height: 1.45; white-space: pre; }
+.control { color: #c00000; font-weight: 700; }
+</style>
+</head>
+<body>
+<pre>""" + "\n".join(body_lines) + """</pre>
+</body>
+</html>
+"""
 
     def clear_all(self):
         self.input_text.delete("1.0", tk.END)

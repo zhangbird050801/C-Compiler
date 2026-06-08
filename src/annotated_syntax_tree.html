@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+body { font-family: NSimSun, SimSun, "Microsoft YaHei UI", monospace; }
+pre { font-size: 15px; line-height: 1.45; white-space: pre; }
+.control { color: #c00000; font-weight: 700; }
+</style>
+</head>
+<body>
+<pre>PROGRAM  @1
+|-- STRUCT_DECL  &quot;student&quot;  @3
+|   |-- FIELD_DECL  &quot;name&quot;  @4  [type: char*]  [comment: 姓名]
+|   |-- FIELD_DECL  &quot;num&quot;  @5  [type: int]  [comment: 学号]
+|   |-- FIELD_DECL  &quot;age&quot;  @6  [type: int]  [comment: 年龄]
+|   `-- FIELD_DECL  &quot;score&quot;  @7  [type: int[5]]  [comment: 成绩]
+`-- FUNC_DEF  &quot;main&quot;  @10
+    |-- TYPE_SPEC  &quot;int&quot;  @10
+    `-- COMPOUND_STMT  @10
+        |-- VAR_DECL  &quot;i&quot;  @11  [type: int]
+        |   |-- TYPE_SPEC  &quot;int&quot;  @11
+        |   `-- LITERAL_INT  &quot;0&quot;  @11  [type: int]
+        |-- VAR_DECL  &quot;max&quot;  @12  [type: int]
+        |   |-- TYPE_SPEC  &quot;int&quot;  @12
+        |   `-- LITERAL_INT  &quot;0&quot;  @12  [type: int]
+        |-- VAR_DECL  &quot;Li&quot;  @13  [type: struct student]
+        |   |-- TYPE_SPEC  &quot;struct student&quot;  @13
+        |   |-- INIT_FIELD  &quot;name&quot;  @13  [type: char*]
+        |   |   `-- LITERAL_STRING  &quot;Li ping&quot;  @13  [type: char*]
+        |   |-- INIT_FIELD  &quot;num&quot;  @13  [type: int]
+        |   |   `-- LITERAL_INT  &quot;5&quot;  @13  [type: int]
+        |   |-- INIT_FIELD  &quot;age&quot;  @13  [type: int]
+        |   |   `-- LITERAL_INT  &quot;18&quot;  @13  [type: int]
+        |   `-- INIT_FIELD  &quot;score&quot;  @13  [type: int[5]]
+        |       |-- LITERAL_INT  &quot;80&quot;  @13  [type: int]
+        |       |-- LITERAL_INT  &quot;90&quot;  @13  [type: int]
+        |       |-- LITERAL_INT  &quot;100&quot;  @13  [type: int]
+        |       |-- LITERAL_INT  &quot;86&quot;  @13  [type: int]
+        |       `-- LITERAL_INT  &quot;95&quot;  @13  [type: int]
+<span class="control">        |-- WHILE_STMT  @15  [control: while(i &lt; 5)]  [false -&gt; quad 18: exit loop]</span>
+        |   |-- BINARY_EXPR  op=&lt;  @15  [type: int]
+        |   |   |-- IDENTIFIER  &quot;i&quot;  @15  [type: int]  [symbol: i]  [offset: -2]  [lvalue]
+        |   |   `-- LITERAL_INT  &quot;5&quot;  @15  [type: int]
+<span class="control">        |   `-- COMPOUND_STMT  @15  [loop_body: execute nested statements, then jump back to while condition]  [loop_back -&gt; quad 10]</span>
+<span class="control">        |       |-- IF_STMT  @16  [control: if(Li.score[i] &gt; max)]  [false -&gt; quad 15: skip then]</span>
+        |       |   |-- BINARY_EXPR  op=&gt;  @16  [type: int]
+        |       |   |   |-- ARRAY_SUBSCRIPT  @16  [type: int]  [lvalue]
+        |       |   |   |   |-- MEMBER_EXPR  &quot;.score&quot;  @16  [type: int[5]]
+        |       |   |   |   |   `-- IDENTIFIER  &quot;Li&quot;  @16  [type: struct student]  [symbol: Li]  [offset: -6]  [lvalue]
+        |       |   |   |   `-- IDENTIFIER  &quot;i&quot;  @16  [type: int]  [symbol: i]  [offset: -2]  [lvalue]
+        |       |   |   `-- IDENTIFIER  &quot;max&quot;  @16  [type: int]  [symbol: max]  [offset: -4]  [lvalue]
+        |       |   `-- COMPOUND_STMT  @16
+        |       |       `-- EXPR_STMT  @17
+        |       |           `-- ASSIGN_EXPR  op==  @17  [type: int]
+        |       |               |-- IDENTIFIER  &quot;max&quot;  @17  [type: int]  [symbol: max]  [offset: -4]  [lvalue]
+        |       |               `-- ARRAY_SUBSCRIPT  @17  [type: int]  [lvalue]
+        |       |                   |-- MEMBER_EXPR  &quot;.score&quot;  @17  [type: int[5]]
+        |       |                   |   `-- IDENTIFIER  &quot;Li&quot;  @17  [type: struct student]  [symbol: Li]  [offset: -6]  [lvalue]
+        |       |                   `-- IDENTIFIER  &quot;i&quot;  @17  [type: int]  [symbol: i]  [offset: -2]  [lvalue]
+        |       `-- EXPR_STMT  @19
+        |           `-- UNARY_EXPR  op=++  @19  [type: int]
+        |               `-- IDENTIFIER  &quot;i&quot;  @19  [type: int]  [symbol: i]  [offset: -2]  [lvalue]
+        |-- EXPR_STMT  @22
+        |   `-- FUNC_CALL  &quot;printf&quot;  @22  [type: int]
+        |       |-- LITERAL_STRING  &quot;%d&quot;  @22  [type: char*]
+        |       `-- IDENTIFIER  &quot;max&quot;  @22  [type: int]  [symbol: max]  [offset: -4]  [lvalue]
+        `-- RETURN_STMT  @23
+            `-- LITERAL_INT  &quot;0&quot;  @23  [type: int]</pre>
+</body>
+</html>
