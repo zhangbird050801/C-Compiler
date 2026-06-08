@@ -137,7 +137,7 @@ def c_grammar() -> Grammar:
         "RetVal": [["Expr"], [EPS]],
 
         "IfStmt": [["if", "(", "Expr", ")", "Stmt", "ElsePart"]],
-        "ElsePart": [["else", "Stmt"]],
+        "ElsePart": [["else", "Stmt"], [EPS]],
 
         "WhileStmt": [["while", "(", "Expr", ")", "Stmt"]],
 

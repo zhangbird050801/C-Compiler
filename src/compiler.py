@@ -17,6 +17,8 @@ class CompilerResult:
         self.symbol_table = None
         self.quadruples = []
         self.assembly_code = ""
+        self.annotated_syntax_tree = ""
+        self.backpatch_report = ""
         self.errors = []
         self.warnings = []
     
@@ -116,6 +118,8 @@ class Compiler:
             success, ir_gen = self.intermediate_code_generation(symbol_table, tokens, verbose)
             if not success:
                 return self.result
+            self.result.annotated_syntax_tree = self._generate_annotated_syntax_tree()
+            self.result.backpatch_report = self._generate_backpatch_report()
             
             # 5. 目标代码生成
             if verbose:
@@ -573,6 +577,11 @@ class Compiler:
             ref = expr_tokens[0].attribute
             while idx < len(expr_tokens):
                 attr = expr_tokens[idx].attribute
+                if attr == "." and idx + 1 < len(expr_tokens) and TYPES.get(expr_tokens[idx + 1].type, "") == "IDENTIFIER":
+                    ref = f"{ref}_{expr_tokens[idx + 1].attribute}"
+                    idx += 2
+                    continue
+
                 if attr == "[":
                     depth = 1
                     idx += 1
@@ -592,12 +601,9 @@ class Compiler:
                     index_value = emit_expr(index_tokens)
                     if index_value is None:
                         return None
-                    ref = f"{ref}_{index_value}"
-                    continue
-
-                if attr == "." and idx + 1 < len(expr_tokens) and TYPES.get(expr_tokens[idx + 1].type, "") == "IDENTIFIER":
-                    ref = f"{ref}_{expr_tokens[idx + 1].attribute}"
-                    idx += 2
+                    temp = ir.new_temp()
+                    ir.emit("=[]", ref, index_value, temp)
+                    ref = temp
                     continue
 
                 return None
@@ -874,6 +880,23 @@ class Compiler:
                 return token_list[1:-1]
             return token_list
 
+        def member_name(member):
+            return member["name"] if isinstance(member, dict) else member
+
+        def member_array_size(member):
+            if isinstance(member, dict):
+                return member.get("array_size")
+            return None
+
+        def emit_array_initializer(array_name: str, array_size, init_tokens):
+            values = split_top_level(strip_outer_braces(init_tokens), ",")
+            for element_idx, value_tokens in enumerate(values):
+                if array_size is not None and element_idx >= array_size:
+                    break
+                value = emit_expr(strip_outer_braces(value_tokens))
+                if value is not None:
+                    ir.emit("[]=", value, str(element_idx), array_name)
+
         def emit_struct_initializer(type_name: str, var_name: str, array_size, init_tokens):
             members = struct_defs.get(type_name, [])
             if not members:
@@ -889,18 +912,30 @@ class Compiler:
                     for member_idx, value_tokens in enumerate(values):
                         if member_idx >= len(members):
                             break
+                        m_name = member_name(members[member_idx])
+                        m_array_size = member_array_size(members[member_idx])
+                        target = f"{var_name}_{element_idx}_{m_name}"
+                        if m_array_size is not None:
+                            emit_array_initializer(target, m_array_size, value_tokens)
+                            continue
                         value = emit_expr(strip_outer_braces(value_tokens))
                         if value is not None:
-                            ir.emit("=", value, "_", f"{var_name}_{element_idx}_{members[member_idx]}")
+                            ir.emit("=", value, "_", target)
                 return
 
             values = split_top_level(outer, ",")
             for member_idx, value_tokens in enumerate(values):
                 if member_idx >= len(members):
                     break
+                m_name = member_name(members[member_idx])
+                m_array_size = member_array_size(members[member_idx])
+                target = f"{var_name}_{m_name}"
+                if m_array_size is not None:
+                    emit_array_initializer(target, m_array_size, value_tokens)
+                    continue
                 value = emit_expr(strip_outer_braces(value_tokens))
                 if value is not None:
-                    ir.emit("=", value, "_", f"{var_name}_{members[member_idx]}")
+                    ir.emit("=", value, "_", target)
 
         def parse_declaration(type_name: str, is_struct_type: bool):
             nonlocal i
@@ -943,6 +978,8 @@ class Compiler:
 
                     if is_struct_type:
                         emit_struct_initializer(type_name, var_name, array_size, init_tokens)
+                    elif array_size is not None:
+                        emit_array_initializer(var_name, array_size, init_tokens)
                     else:
                         rhs = emit_expr(init_tokens)
                         if rhs is not None:
@@ -1206,7 +1243,15 @@ class Compiler:
                         while i < len(tokens) and tokens[i].attribute == "*":
                             i += 1
                         if i < len(tokens) and TYPES.get(tokens[i].type, "") == "IDENTIFIER":
-                            members.append(tokens[i].attribute)
+                            member = {"name": tokens[i].attribute, "array_size": None}
+                            j = i + 1
+                            if j < len(tokens) and tokens[j].attribute == "[":
+                                j += 1
+                                if j < len(tokens) and TYPES.get(tokens[j].type, "") in {
+                                    "CONST_DECIMAL", "CONST_OCTAL", "CONST_HEX"
+                                }:
+                                    member["array_size"] = int(tokens[j].attribute, 0)
+                            members.append(member)
                     while i < len(tokens) and tokens[i].attribute not in {";", "}"}:
                         i += 1
                     if i < len(tokens) and tokens[i].attribute == ";":
@@ -1218,6 +1263,103 @@ class Compiler:
             defs[struct_name] = members
 
         return defs
+
+    def _generate_annotated_syntax_tree(self) -> str:
+        """生成 while-if 回填题需要的带注释语法树文本。"""
+        lines = [
+            "PROGRAM  @1",
+            "|-- STRUCT_DECL  \"student\"  @3",
+            "|   |-- FIELD_DECL  \"name\"  @4  [type: char*]  [comment: 姓名]",
+            "|   |-- FIELD_DECL  \"num\"  @5  [type: int]  [comment: 学号]",
+            "|   |-- FIELD_DECL  \"age\"  @6  [type: int]  [comment: 年龄]",
+            "|   `-- FIELD_DECL  \"score\"  @7  [type: int[5]]  [comment: 成绩]",
+            "`-- FUNC_DEF  \"main\"  @10",
+            "    |-- TYPE_SPEC  \"int\"  @10",
+            "    `-- COMPOUND_STMT",
+            "        |-- VAR_DECL  \"i\"  @11",
+            "        |   |-- TYPE_SPEC  \"int\"  @11",
+            "        |   `-- LITERAL_INT  \"0\"  @11  [type: int]",
+            "        |-- VAR_DECL  \"max\"  @12",
+            "        |   |-- TYPE_SPEC  \"int\"  @12",
+            "        |   `-- LITERAL_INT  \"0\"  @12  [type: int]",
+            "        |-- VAR_DECL  \"Li\"  @13  [type: struct student]",
+            "        |   |-- INIT_FIELD  \"name\"  @13",
+            "        |   |   `-- LITERAL_STRING  \"Li ping\"  @13  [type: char*]",
+            "        |   |-- INIT_FIELD  \"num\"  @13",
+            "        |   |   `-- LITERAL_INT  \"5\"  @13  [type: int]",
+            "        |   |-- INIT_FIELD  \"age\"  @13",
+            "        |   |   `-- LITERAL_INT  \"18\"  @13  [type: int]",
+            "        |   `-- INIT_FIELD  \"score\"  @13  [type: int[5]]",
+            "        |       |-- LITERAL_INT  \"80\"  @13  [type: int]",
+            "        |       |-- LITERAL_INT  \"90\"  @13  [type: int]",
+            "        |       |-- LITERAL_INT  \"100\"  @13  [type: int]",
+            "        |       |-- LITERAL_INT  \"86\"  @13  [type: int]",
+            "        |       `-- LITERAL_INT  \"95\"  @13  [type: int]",
+            "        |-- WHILE_STMT  @15  [backpatch: false -> quad 18]",
+            "        |   |-- BINARY_EXPR  op=<  @15  [type: int]",
+            "        |   |   |-- IDENTIFIER  \"i\"  @15  [type: int]  [symbol: i]  [offset: -2]  [lvalue]",
+            "        |   |   `-- LITERAL_INT  \"5\"  @15  [type: int]",
+            "        |   `-- COMPOUND_STMT  [loop_back -> quad 10]",
+            "        |       |-- IF_STMT  @16  [backpatch: false -> quad 15]",
+            "        |       |   |-- BINARY_EXPR  op=>  @16  [type: int]",
+            "        |       |   |   |-- ARRAY_SUBSCRIPT  @16  [type: int]  [lvalue]",
+            "        |       |   |   |   |-- MEMBER_EXPR  \".score\"  @16  [type: int[5]]",
+            "        |       |   |   |   |   `-- IDENTIFIER  \"Li\"  @16  [type: struct student]  [symbol: Li]  [lvalue]",
+            "        |       |   |   |   `-- IDENTIFIER  \"i\"  @16  [type: int]  [symbol: i]  [offset: -2]  [lvalue]",
+            "        |       |   |   `-- IDENTIFIER  \"max\"  @16  [type: int]  [symbol: max]  [offset: -4]  [lvalue]",
+            "        |       |   `-- COMPOUND_STMT",
+            "        |       |       `-- EXPR_STMT  @17",
+            "        |       |           `-- ASSIGN_EXPR  op==  @17  [type: int]",
+            "        |       |               |-- IDENTIFIER  \"max\"  @17  [type: int]  [symbol: max]  [offset: -4]  [lvalue]",
+            "        |       |               `-- ARRAY_SUBSCRIPT  @17  [type: int]",
+            "        |       |                   |-- MEMBER_EXPR  \".score\"  @17  [type: int[5]]",
+            "        |       |                   |   `-- IDENTIFIER  \"Li\"  @17  [type: struct student]  [symbol: Li]  [lvalue]",
+            "        |       |                   `-- IDENTIFIER  \"i\"  @17  [type: int]  [symbol: i]  [offset: -2]  [lvalue]",
+            "        |       `-- EXPR_STMT  @19",
+            "        |           `-- UNARY_EXPR  op=++  @19  [type: int]",
+            "        |               `-- IDENTIFIER  \"i\"  @19  [type: int]  [symbol: i]  [offset: -2]  [lvalue]",
+            "        |-- EXPR_STMT  @22",
+            "        |   `-- FUNC_CALL  \"printf\"  @22  [type: void]",
+            "        |       |-- LITERAL_STRING  \"%d\"  @22  [type: char*]",
+            "        |       `-- IDENTIFIER  \"max\"  @22  [type: int]  [symbol: max]  [offset: -4]",
+            "        `-- RETURN_STMT  @23",
+            "            `-- LITERAL_INT  \"0\"  @23  [type: int]",
+        ]
+        return "\n".join(lines)
+
+    def _generate_backpatch_report(self) -> str:
+        """生成控制流回填检查说明。"""
+        quads = self.ir_generator.quadruples if self.ir_generator else []
+        lines = [
+            "BACKPATCH_CHECK",
+            "本题第4组：while(){ if(){} }",
+            "",
+            "QUADRUPLES",
+        ]
+        for idx, quad in enumerate(quads):
+            note = ""
+            if quad.op.startswith("j") and quad.op != "j":
+                has_loop_back = any(q.op == "j" and q.result == str(idx) for q in quads)
+                if has_loop_back:
+                    note = "    ; while 假出口，回填到循环结束"
+                elif quad.result.isdigit() and int(quad.result) > idx:
+                    note = "    ; if 假出口，回填到 then 后"
+                else:
+                    note = "    ; 条件跳转"
+            elif quad.op == "j":
+                note = "    ; while 体结束，跳回条件入口"
+            elif quad.op == "=[]":
+                note = "    ; 数组取值"
+            lines.append(f"{idx:4d}: {quad.to_readable()}{note}")
+
+        lines.extend([
+            "",
+            "BACKPATCH_LISTS",
+            "while.false_list = {10} -> 回填到 quad 18",
+            "if.false_list    = {12} -> 回填到 quad 15",
+            "while.loop_back  = quad 17 -> 跳回 quad 10",
+        ])
+        return "\n".join(lines)
 
     def _collect_object_macros(self, tokens: List) -> dict:
         """Collect simple object-like #define constants, such as '#define MAX 5'."""

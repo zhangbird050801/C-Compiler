@@ -38,19 +38,32 @@ class LexerApp(tk.Tk):
         super().__init__()
         self.title("C 语言编译器实验 - 完整编译流程")
         self.geometry("1400x900")
-        self.text_font = font.Font(family="Consolas", size=10)
-        self.ui_font = font.Font(family="Microsoft YaHei UI", size=10)
-        self.header_font = font.Font(family="Microsoft YaHei UI", size=11, weight="bold")
+        self.cn_font_family = self.choose_font_family([
+            "Microsoft YaHei UI", "Microsoft YaHei", "SimSun", "NSimSun", "Arial"
+        ])
+        self.text_font_family = self.choose_font_family([
+            "NSimSun", "SimSun", "Microsoft YaHei UI", "Microsoft YaHei", "Consolas"
+        ])
+        self.text_font = font.Font(family=self.text_font_family, size=11)
+        self.ui_font = font.Font(family=self.cn_font_family, size=10)
+        self.header_font = font.Font(family=self.cn_font_family, size=11, weight="bold")
 
         # --- 样式配置 ---
         style = ttk.Style()
         # 设置 Treeview 行高，避免太拥挤
-        style.configure("Treeview", font=("Microsoft YaHei UI", 10), rowheight=28)
-        style.configure("Treeview.Heading", font=("Microsoft YaHei UI", 10, "bold"))
-        style.configure("Sets.Treeview", font=("Microsoft YaHei UI", 10), rowheight=28)
-        style.configure("Sets.Treeview.Heading", font=("Microsoft YaHei UI", 10, "bold"))
+        style.configure("Treeview", font=(self.cn_font_family, 10), rowheight=28)
+        style.configure("Treeview.Heading", font=(self.cn_font_family, 10, "bold"))
+        style.configure("Sets.Treeview", font=(self.cn_font_family, 10), rowheight=28)
+        style.configure("Sets.Treeview.Heading", font=(self.cn_font_family, 10, "bold"))
 
         self.create_widgets()
+
+    def choose_font_family(self, candidates):
+        available = set(font.families(self))
+        for family in candidates:
+            if family in available:
+                return family
+        return "TkDefaultFont"
 
     def create_widgets(self):
         # 顶部按钮区
@@ -125,10 +138,10 @@ class LexerApp(tk.Tk):
         # --- 关键：配置表头行的 Tag 样式 ---
         # background: 浅灰色背景，显眼
         # font: 加粗，大一号
-        self.sets_tree.tag_configure("header", background="#e1e1e1", foreground="#000000", font=("Microsoft YaHei", 10, "bold"))
+        self.sets_tree.tag_configure("header", background="#e1e1e1", foreground="#000000", font=(self.cn_font_family, 10, "bold"))
         self.sets_tree.column("left", width=520, anchor='w')
         self.sets_tree.column("right", width=650, anchor='w')
-        self.sets_tree.tag_configure("header", background="#e1e1e1", foreground="#000000", font=("Microsoft YaHei UI", 10, "bold"))
+        self.sets_tree.tag_configure("header", background="#e1e1e1", foreground="#000000", font=(self.cn_font_family, 10, "bold"))
 
         vsb_sets = ttk.Scrollbar(self.sets_frame, orient="vertical", command=self.sets_tree.yview)
         hsb_sets = ttk.Scrollbar(self.sets_frame, orient="horizontal", command=self.sets_tree.xview)
@@ -189,7 +202,22 @@ class LexerApp(tk.Tk):
         self.asm_tab = scrolledtext.ScrolledText(self.notebook, wrap=tk.NONE, font=self.text_font, state='disabled')
         self.notebook.add(self.asm_tab, text=" 目标代码（汇编） ")
 
+        # Tab 7: 题目2 注释语法树
+        self.annotated_tree_tab = scrolledtext.ScrolledText(self.notebook, wrap=tk.NONE, font=self.text_font, state='disabled')
+        self.notebook.add(self.annotated_tree_tab, text=" 注释语法树 ")
+
+        # Tab 8: 回填检查
+        self.backpatch_tab = scrolledtext.ScrolledText(self.notebook, wrap=tk.NONE, font=self.text_font, state='disabled')
+        self.notebook.add(self.backpatch_tab, text=" 回填检查 ")
+
         self.paned_window.add(output_frame, weight=3)
+
+        self.load_default_source()
+
+    def load_default_source(self):
+        default_file = Path(__file__).resolve().parent / "c-code.c"
+        if default_file.exists() and not self.input_text.get("1.0", tk.END).strip():
+            self.input_text.insert("1.0", default_file.read_text(encoding="utf-8"))
 
     def load_file(self):
         filepath = filedialog.askopenfilename(filetypes=[("C Files", "*.c"), ("All Files", "*.*")])
@@ -373,15 +401,29 @@ class LexerApp(tk.Tk):
                 self.asm_tab.insert("1.0", result.assembly_code)
                 self.asm_tab.config(state='disabled')
 
+                self.annotated_tree_tab.config(state='normal')
+                self.annotated_tree_tab.delete("1.0", tk.END)
+                self.annotated_tree_tab.insert("1.0", result.annotated_syntax_tree)
+                self.annotated_tree_tab.config(state='disabled')
+
+                self.backpatch_tab.config(state='normal')
+                self.backpatch_tab.delete("1.0", tk.END)
+                self.backpatch_tab.insert("1.0", result.backpatch_report)
+                self.backpatch_tab.config(state='disabled')
+
                 output_dir = Path(__file__).resolve().parent
                 output_asm = output_dir / "output.asm"
                 masm_asm = output_dir / "c-code.asm"
                 output_ir = output_dir / "output.ir"
+                annotated_tree = output_dir / "annotated_syntax_tree.txt"
+                backpatch_report = output_dir / "backpatch_report.txt"
                 output_asm.write_text(result.assembly_code, encoding="utf-8")
                 masm_asm.write_text(result.assembly_code, encoding="utf-8")
                 output_ir.write_text("\n".join(
                     f"{idx:4d}  {quad.to_readable()}" for idx, quad in enumerate(result.quadruples)
                 ), encoding="utf-8")
+                annotated_tree.write_text(result.annotated_syntax_tree, encoding="utf-8")
+                backpatch_report.write_text(result.backpatch_report, encoding="utf-8")
                 
                 # 切换到语义分析选项卡
                 self.notebook.select(0)
@@ -391,7 +433,9 @@ class LexerApp(tk.Tk):
                     f"- 识别 {len(result.tokens)} 个token\n"
                     f"- 符号表包含 {len(result.symbol_table.global_scope.symbols)} 个符号\n"
                     f"- 生成 {len(result.quadruples)} 条四元式\n"
-                    f"- 生成 {len(result.assembly_code.split(chr(10)))} 行汇编代码")
+                    f"- 生成 {len(result.assembly_code.split(chr(10)))} 行汇编代码\n"
+                    f"- 已保存注释语法树 annotated_syntax_tree.txt\n"
+                    f"- 已保存回填检查 backpatch_report.txt")
             else:
                 error_msg = "\n".join(result.errors[:5])
                 messagebox.showerror("编译失败", f"编译过程中出现错误：\n\n{error_msg}")
@@ -417,6 +461,12 @@ class LexerApp(tk.Tk):
         self.asm_tab.config(state='normal')
         self.asm_tab.delete("1.0", tk.END)
         self.asm_tab.config(state='disabled')
+        self.annotated_tree_tab.config(state='normal')
+        self.annotated_tree_tab.delete("1.0", tk.END)
+        self.annotated_tree_tab.config(state='disabled')
+        self.backpatch_tab.config(state='normal')
+        self.backpatch_tab.delete("1.0", tk.END)
+        self.backpatch_tab.config(state='disabled')
 
 if __name__ == '__main__':
     app = LexerApp()

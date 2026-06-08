@@ -124,6 +124,18 @@ class CodeGenerator:
         # 收集所有需要定义的变量（包括结构体成员）
         all_vars: Dict[str, str] = {}
 
+        def array_def_size(var_def: str):
+            marker = "DUP("
+            if marker not in var_def:
+                return None
+            prefix = var_def.split(marker, 1)[0].strip().split()
+            if not prefix:
+                return None
+            try:
+                return int(prefix[-1])
+            except ValueError:
+                return None
+
         def add_var(name: str, var_def: str):
             """同名变量去重：优先保留数组定义。"""
             old_def = all_vars.get(name)
@@ -138,6 +150,11 @@ class CodeGenerator:
             new_is_array = "DUP(" in var_def
             if new_is_array and not old_is_array:
                 all_vars[name] = var_def
+            elif new_is_array and old_is_array:
+                old_size = array_def_size(old_def) or 0
+                new_size = array_def_size(var_def) or 0
+                if new_size > old_size:
+                    all_vars[name] = var_def
         
         # 从符号表收集
         for name, symbol in self.symbol_table.global_scope.symbols.items():
@@ -158,6 +175,16 @@ class CodeGenerator:
         
         # 从四元式中提取所有变量（包括结构体成员）
         for quad in self.ir_gen.quadruples:
+            if quad.op == "[]=":
+                size = 50
+                if self.is_number(quad.arg2):
+                    size = int(float(quad.arg2)) + 1
+                add_var(self.normalize_var_name(quad.result), f"DW {size} DUP(0)")
+            elif quad.op == "=[]":
+                array_name = self.normalize_var_name(quad.arg1)
+                if array_name not in all_vars:
+                    add_var(array_name, "DW 50 DUP(0)")
+
             for var in [quad.arg1, quad.arg2, quad.result]:
                 if var and var != "_" and not self.is_number(var) and not var.startswith('"'):
                     # 跳过浮点数（包含小数点的数字）

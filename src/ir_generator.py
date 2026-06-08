@@ -43,6 +43,10 @@ class Quadruple:
             return f"scanf {self.result}"
         elif self.op == "label":
             return f"{self.arg1}:"
+        elif self.op == "=[]":
+            return f"{self.result} = {self.arg1}[{self.arg2}]"
+        elif self.op == "[]=":
+            return f"{self.result}[{self.arg2}] = {self.arg1}"
         else:
             return str(self)
 

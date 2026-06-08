@@ -1,0 +1,57 @@
+PROGRAM  @1
+|-- STRUCT_DECL  "student"  @3
+|   |-- FIELD_DECL  "name"  @4  [type: char*]  [comment: 姓名]
+|   |-- FIELD_DECL  "num"  @5  [type: int]  [comment: 学号]
+|   |-- FIELD_DECL  "age"  @6  [type: int]  [comment: 年龄]
+|   `-- FIELD_DECL  "score"  @7  [type: int[5]]  [comment: 成绩]
+`-- FUNC_DEF  "main"  @10
+    |-- TYPE_SPEC  "int"  @10
+    `-- COMPOUND_STMT
+        |-- VAR_DECL  "i"  @11
+        |   |-- TYPE_SPEC  "int"  @11
+        |   `-- LITERAL_INT  "0"  @11  [type: int]
+        |-- VAR_DECL  "max"  @12
+        |   |-- TYPE_SPEC  "int"  @12
+        |   `-- LITERAL_INT  "0"  @12  [type: int]
+        |-- VAR_DECL  "Li"  @13  [type: struct student]
+        |   |-- INIT_FIELD  "name"  @13
+        |   |   `-- LITERAL_STRING  "Li ping"  @13  [type: char*]
+        |   |-- INIT_FIELD  "num"  @13
+        |   |   `-- LITERAL_INT  "5"  @13  [type: int]
+        |   |-- INIT_FIELD  "age"  @13
+        |   |   `-- LITERAL_INT  "18"  @13  [type: int]
+        |   `-- INIT_FIELD  "score"  @13  [type: int[5]]
+        |       |-- LITERAL_INT  "80"  @13  [type: int]
+        |       |-- LITERAL_INT  "90"  @13  [type: int]
+        |       |-- LITERAL_INT  "100"  @13  [type: int]
+        |       |-- LITERAL_INT  "86"  @13  [type: int]
+        |       `-- LITERAL_INT  "95"  @13  [type: int]
+        |-- WHILE_STMT  @15  [backpatch: false -> quad 18]
+        |   |-- BINARY_EXPR  op=<  @15  [type: int]
+        |   |   |-- IDENTIFIER  "i"  @15  [type: int]  [symbol: i]  [offset: -2]  [lvalue]
+        |   |   `-- LITERAL_INT  "5"  @15  [type: int]
+        |   `-- COMPOUND_STMT  [loop_back -> quad 10]
+        |       |-- IF_STMT  @16  [backpatch: false -> quad 15]
+        |       |   |-- BINARY_EXPR  op=>  @16  [type: int]
+        |       |   |   |-- ARRAY_SUBSCRIPT  @16  [type: int]  [lvalue]
+        |       |   |   |   |-- MEMBER_EXPR  ".score"  @16  [type: int[5]]
+        |       |   |   |   |   `-- IDENTIFIER  "Li"  @16  [type: struct student]  [symbol: Li]  [lvalue]
+        |       |   |   |   `-- IDENTIFIER  "i"  @16  [type: int]  [symbol: i]  [offset: -2]  [lvalue]
+        |       |   |   `-- IDENTIFIER  "max"  @16  [type: int]  [symbol: max]  [offset: -4]  [lvalue]
+        |       |   `-- COMPOUND_STMT
+        |       |       `-- EXPR_STMT  @17
+        |       |           `-- ASSIGN_EXPR  op==  @17  [type: int]
+        |       |               |-- IDENTIFIER  "max"  @17  [type: int]  [symbol: max]  [offset: -4]  [lvalue]
+        |       |               `-- ARRAY_SUBSCRIPT  @17  [type: int]
+        |       |                   |-- MEMBER_EXPR  ".score"  @17  [type: int[5]]
+        |       |                   |   `-- IDENTIFIER  "Li"  @17  [type: struct student]  [symbol: Li]  [lvalue]
+        |       |                   `-- IDENTIFIER  "i"  @17  [type: int]  [symbol: i]  [offset: -2]  [lvalue]
+        |       `-- EXPR_STMT  @19
+        |           `-- UNARY_EXPR  op=++  @19  [type: int]
+        |               `-- IDENTIFIER  "i"  @19  [type: int]  [symbol: i]  [offset: -2]  [lvalue]
+        |-- EXPR_STMT  @22
+        |   `-- FUNC_CALL  "printf"  @22  [type: void]
+        |       |-- LITERAL_STRING  "%d"  @22  [type: char*]
+        |       `-- IDENTIFIER  "max"  @22  [type: int]  [symbol: max]  [offset: -4]
+        `-- RETURN_STMT  @23
+            `-- LITERAL_INT  "0"  @23  [type: int]

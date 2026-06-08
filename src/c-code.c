@@ -1,29 +1,24 @@
 #include <stdio.h>
 
 struct student {
-    char *name;      // 姓名
-    int num;         // 学号
-    int age;         // 年龄
-    float score;     // 成绩
+    char *name;     // 姓名
+    int num;        // 学号
+    int age;        // 年龄
+    int score[5];   // 成绩
 };
 
 int main() {
-    int i, num_140 = 0;
-    float sum = 0;
-    int flag;
+    int i = 0;
+    int max = 0;
+    struct student Li = {"Li ping", 5, 18, {80, 90, 100, 86, 95}};
 
-    struct student sts[2] = {
-        {"Li ping", 5, 18, 145.0},
-        {"Wang ming", 6, 18, 150.0}
-    };
-
-    if (sts[1].score < 140) {
-        flag = -1;
-    } else {
-        flag = 1;
+    while (i < 5) {
+        if (Li.score[i] > max) {
+            max = Li.score[i];
+        }
+        i++;
     }
 
-    printf("%d ", flag);
-
+    printf("%d", max);
     return 0;
 }
