@@ -38,12 +38,12 @@ pre { font-size: 15px; line-height: 1.45; white-space: pre; }
         |       |-- LITERAL_INT  &quot;100&quot;  @13  [type: int]
         |       |-- LITERAL_INT  &quot;86&quot;  @13  [type: int]
         |       `-- LITERAL_INT  &quot;95&quot;  @13  [type: int]
-<span class="control">        |-- WHILE_STMT  @15  [control: while(i &lt; 5)]  [false -&gt; quad 18: exit loop]</span>
+<span class="control">        |-- WHILE_STMT  @15  [control: while(i &lt; 5)]  [false -&gt; quad 17: exit loop]</span>
         |   |-- BINARY_EXPR  op=&lt;  @15  [type: int]
         |   |   |-- IDENTIFIER  &quot;i&quot;  @15  [type: int]  [symbol: i]  [offset: -2]  [lvalue]
         |   |   `-- LITERAL_INT  &quot;5&quot;  @15  [type: int]
 <span class="control">        |   `-- COMPOUND_STMT  @15  [loop_body: execute nested statements, then jump back to while condition]  [loop_back -&gt; quad 10]</span>
-<span class="control">        |       |-- IF_STMT  @16  [control: if(Li.score[i] &gt; max)]  [false -&gt; quad 15: skip then]</span>
+<span class="control">        |       |-- IF_STMT  @16  [control: if(Li.score[i] &gt; max)]  [false -&gt; quad 14: skip then]</span>
         |       |   |-- BINARY_EXPR  op=&gt;  @16  [type: int]
         |       |   |   |-- ARRAY_SUBSCRIPT  @16  [type: int]  [lvalue]
         |       |   |   |   |-- MEMBER_EXPR  &quot;.score&quot;  @16  [type: int[5]]

@@ -524,6 +524,7 @@ class Compiler:
         i = 0
         struct_defs = self._collect_struct_defs(filtered_tokens)
         custom_type_names = set(struct_defs)
+        expr_cache = {}
 
         def tok_type(idx: int) -> str:
             if 0 <= idx < n:
@@ -570,6 +571,17 @@ class Compiler:
             if ttype == "IDENTIFIER" and tok.attribute in object_macros:
                 return object_macros[tok.attribute]
             return tok.attribute
+
+        def expr_cache_key(expr_tokens):
+            if not expr_tokens:
+                return None
+            attrs = tuple(t.attribute for t in expr_tokens)
+            if "[" in attrs or "." in attrs:
+                return attrs
+            return None
+
+        def clear_expr_cache():
+            expr_cache.clear()
 
         def parse_reference_operand(expr_tokens):
             if not expr_tokens or TYPES.get(expr_tokens[0].type, "") != "IDENTIFIER":
@@ -628,8 +640,14 @@ class Compiler:
                 ir.emit("-", "0", operand, temp)
                 return temp
 
+            key = expr_cache_key(expr_tokens)
+            if key is not None and key in expr_cache:
+                return expr_cache[key]
+
             ref_operand = parse_reference_operand(expr_tokens)
             if ref_operand is not None:
+                if key is not None:
+                    expr_cache[key] = ref_operand
                 return ref_operand
 
             operators = {"+", "-", "*", "/", "%"}
@@ -799,12 +817,14 @@ class Compiler:
                 temp = ir.new_temp()
                 ir.emit(op, token_list[0].attribute, "1", temp)
                 ir.emit("=", temp, "_", token_list[0].attribute)
+                clear_expr_cache()
                 return
 
             if len(token_list) >= 3 and TYPES.get(token_list[0].type, "") == "IDENTIFIER" and token_list[1].attribute == "=":
                 rhs = emit_expr(token_list[2:])
                 if rhs is not None:
                     ir.emit("=", rhs, "_", token_list[0].attribute)
+                    clear_expr_cache()
 
         def parse_printf_from_args(arg_exprs):
             args = [expr for expr in (emit_expr(expr_tokens) for expr_tokens in arg_exprs) if expr is not None]
@@ -898,6 +918,7 @@ class Compiler:
                 value = emit_expr(strip_outer_braces(value_tokens))
                 if value is not None:
                     ir.emit("[]=", value, str(element_idx), array_name)
+                    clear_expr_cache()
 
         def emit_struct_initializer(type_name: str, var_name: str, array_size, init_tokens):
             members = struct_defs.get(type_name, [])
@@ -923,6 +944,7 @@ class Compiler:
                         value = emit_expr(strip_outer_braces(value_tokens))
                         if value is not None:
                             ir.emit("=", value, "_", target)
+                            clear_expr_cache()
                 return
 
             values = split_top_level(outer, ",")
@@ -938,6 +960,7 @@ class Compiler:
                 value = emit_expr(strip_outer_braces(value_tokens))
                 if value is not None:
                     ir.emit("=", value, "_", target)
+                    clear_expr_cache()
 
         def parse_declaration(type_name: str, is_struct_type: bool):
             nonlocal i
@@ -986,6 +1009,7 @@ class Compiler:
                         rhs = emit_expr(init_tokens)
                         if rhs is not None:
                             ir.emit("=", rhs, "_", var_name)
+                            clear_expr_cache()
 
                 if tok_attr(i) == ",":
                     i += 1
@@ -1073,6 +1097,7 @@ class Compiler:
                             rhs = emit_expr(expr_tokens)
                             if rhs is not None:
                                 ir.emit("=", rhs, "_", var_name)
+                                clear_expr_cache()
                     elif tok_attr(i) == ",":
                         i += 1
                     else:
@@ -1186,6 +1211,7 @@ class Compiler:
                     rhs = emit_expr(expr_tokens)
                     if rhs is not None:
                         ir.emit("=", rhs, "_", lhs)
+                        clear_expr_cache()
                     if tok_attr(i) == ";":
                         i += 1
                     return
@@ -1193,6 +1219,7 @@ class Compiler:
                 # 自增自减语句
                 if tok_attr(i + 1) in {"++", "--"}:
                     parse_inline_assignment([filtered_tokens[i], filtered_tokens[i + 1]])
+                    clear_expr_cache()
                     i += 2
                     if tok_attr(i) == ";":
                         i += 1
