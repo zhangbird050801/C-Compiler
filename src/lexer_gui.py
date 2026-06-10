@@ -19,6 +19,11 @@ except ImportError:
     Compiler = None
 
 try:
+    from ast_core import ASTRenderer
+except ImportError:
+    ASTRenderer = None
+
+try:
     from semantic_analyzer import SemanticAnalyzer
 except ImportError:
     SemanticAnalyzer = None
@@ -202,12 +207,16 @@ class LexerApp(tk.Tk):
         self.asm_tab = scrolledtext.ScrolledText(self.notebook, wrap=tk.NONE, font=self.text_font, state='disabled')
         self.notebook.add(self.asm_tab, text=" 目标代码（汇编） ")
 
-        # Tab 7: 题目2 注释语法树
+        # Tab 7: 基础 AST
+        self.basic_ast_tab = scrolledtext.ScrolledText(self.notebook, wrap=tk.NONE, font=self.text_font, state='disabled')
+        self.notebook.add(self.basic_ast_tab, text=" 基础AST ")
+
+        # Tab 8: 题目2 注释语法树
         self.annotated_tree_tab = scrolledtext.ScrolledText(self.notebook, wrap=tk.NONE, font=self.text_font, state='disabled')
         self.annotated_tree_tab.tag_configure("control_flow", foreground="#c00000")
-        self.notebook.add(self.annotated_tree_tab, text=" 注释语法树 ")
+        self.notebook.add(self.annotated_tree_tab, text=" 注释AST/回填树 ")
 
-        # Tab 8: 回填检查
+        # Tab 9: 回填检查
         self.backpatch_tab = scrolledtext.ScrolledText(self.notebook, wrap=tk.NONE, font=self.text_font, state='disabled')
         self.notebook.add(self.backpatch_tab, text=" 回填检查 ")
 
@@ -402,6 +411,17 @@ class LexerApp(tk.Tk):
                 self.asm_tab.insert("1.0", result.assembly_code)
                 self.asm_tab.config(state='disabled')
 
+                basic_ast_text = ""
+                if result.ast is not None and ASTRenderer is not None:
+                    basic_ast_text = ASTRenderer().render(result.ast)
+                elif result.ast is not None:
+                    basic_ast_text = str(result.ast)
+
+                self.basic_ast_tab.config(state='normal')
+                self.basic_ast_tab.delete("1.0", tk.END)
+                self.basic_ast_tab.insert("1.0", basic_ast_text)
+                self.basic_ast_tab.config(state='disabled')
+
                 self.annotated_tree_tab.config(state='normal')
                 self.annotated_tree_tab.delete("1.0", tk.END)
                 self.annotated_tree_tab.insert("1.0", result.annotated_syntax_tree)
@@ -417,6 +437,7 @@ class LexerApp(tk.Tk):
                 output_asm = output_dir / "output.asm"
                 masm_asm = output_dir / "c-code.asm"
                 output_ir = output_dir / "output.ir"
+                basic_ast_tree = output_dir / "basic_ast_tree.txt"
                 annotated_tree = output_dir / "annotated_syntax_tree.txt"
                 annotated_tree_html = output_dir / "annotated_syntax_tree.html"
                 backpatch_report = output_dir / "backpatch_report.txt"
@@ -425,6 +446,7 @@ class LexerApp(tk.Tk):
                 output_ir.write_text("\n".join(
                     f"{idx:4d}  {quad.to_readable()}" for idx, quad in enumerate(result.quadruples)
                 ), encoding="utf-8")
+                basic_ast_tree.write_text(basic_ast_text, encoding="utf-8")
                 annotated_tree.write_text(result.annotated_syntax_tree, encoding="utf-8")
                 annotated_tree_html.write_text(self.ast_to_html(result.annotated_syntax_tree), encoding="utf-8")
                 backpatch_report.write_text(result.backpatch_report, encoding="utf-8")
@@ -438,6 +460,7 @@ class LexerApp(tk.Tk):
                     f"- 符号表包含 {len(result.symbol_table.global_scope.symbols)} 个符号\n"
                     f"- 生成 {len(result.quadruples)} 条四元式\n"
                     f"- 生成 {len(result.assembly_code.split(chr(10)))} 行汇编代码\n"
+                    f"- 已保存基础AST basic_ast_tree.txt\n"
                     f"- 已保存注释语法树 annotated_syntax_tree.txt\n"
                     f"- 已保存彩色语法树 annotated_syntax_tree.html\n"
                     f"- 已保存回填检查 backpatch_report.txt")
@@ -507,6 +530,9 @@ pre { font-size: 15px; line-height: 1.45; white-space: pre; }
         self.asm_tab.config(state='normal')
         self.asm_tab.delete("1.0", tk.END)
         self.asm_tab.config(state='disabled')
+        self.basic_ast_tab.config(state='normal')
+        self.basic_ast_tab.delete("1.0", tk.END)
+        self.basic_ast_tab.config(state='disabled')
         self.annotated_tree_tab.config(state='normal')
         self.annotated_tree_tab.delete("1.0", tk.END)
         self.annotated_tree_tab.config(state='disabled')

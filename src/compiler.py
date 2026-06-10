@@ -6,6 +6,7 @@ from ir_generator import IRGenerator
 from codegen import CodeGenerator
 from symbol_table import SymbolTable
 from constants import TYPES
+from ast_core import ASTBuilder, ASTIRGenerator, ASTRenderer, ASTSemanticAnalyzer
 
 
 class CompilerResult:
@@ -17,6 +18,7 @@ class CompilerResult:
         self.symbol_table = None
         self.quadruples = []
         self.assembly_code = ""
+        self.ast = None
         self.annotated_syntax_tree = ""
         self.backpatch_report = ""
         self.errors = []
@@ -55,6 +57,8 @@ class Compiler:
         self.semantic_analyzer: Optional[SemanticAnalyzer] = None
         self.ir_generator: Optional[IRGenerator] = None
         self.code_generator: Optional[CodeGenerator] = None
+        self.ast_builder: Optional[ASTBuilder] = None
+        self.ast = None
         self.source_code = ""
         self.result = CompilerResult()
     
@@ -83,7 +87,7 @@ class Compiler:
                 print("第一阶段：词法分析".center(80))
                 print("=" * 80)
             
-            # 词法分析把字符流转换成 token 流，后续所有阶段都基于 tokens 工作。
+            # 词法分析把字符流转换成 token 流，语法分析和 ASTBuilder 会消费这批 tokens。
             success, tokens = self.lexical_analysis(source_code, verbose)
             if not success:
                 return self.result
@@ -97,43 +101,46 @@ class Compiler:
             # LL(1) 语法分析检查 token 排列是否符合文法，并记录推导步骤。
             success, parse_records = self.syntax_analysis(tokens, verbose)
             if not success:
-                # 当前语法分析器覆盖面有限，失败时进入容错翻译模式
-                if self.result.errors and self.result.errors[-1].startswith("语法分析错误:"):
-                    syntax_err = self.result.errors.pop()
-                    self.result.warnings.append(
-                        f"{syntax_err}；已切换到容错模式继续进行语义/IR/目标代码生成"
-                    )
-                else:
-                    self.result.warnings.append("语法分析未通过；已切换到容错模式继续生成代码")
+                return self.result
             
-            # 3. 语义分析
+            # 3. AST构建
             if verbose:
                 print("\n" + "=" * 80)
-                print("第三阶段：语义分析".center(80))
+                print("第三阶段：AST构建".center(80))
                 print("=" * 80)
             
-            # 语义分析在同一批 tokens 上建立符号表，记录变量/数组/结构体类型信息。
-            success, symbol_table = self.semantic_analysis(tokens, verbose)
+            success, ast = self.ast_construction(tokens, verbose)
             if not success:
                 return self.result
             
-            # 4. 中间代码生成
+            # 4. 语义分析
             if verbose:
                 print("\n" + "=" * 80)
-                print("第四阶段：中间代码生成".center(80))
+                print("第四阶段：语义分析".center(80))
                 print("=" * 80)
             
-            # 中间代码生成把声明、表达式、if/while/for 等翻译为四元式。
-            success, ir_gen = self.intermediate_code_generation(symbol_table, tokens, verbose)
+            success, symbol_table = self.semantic_analysis(ast, verbose)
             if not success:
                 return self.result
+            
+            # 5. 中间代码生成
+            if verbose:
+                print("\n" + "=" * 80)
+                print("第五阶段：中间代码生成".center(80))
+                print("=" * 80)
+            
+            success, ir_gen = self.intermediate_code_generation(symbol_table, ast, tokens, verbose)
+            if not success:
+                return self.result
+            # 提交/答辩用语法树使用富注释渲染：包含 TYPE_SPEC、INIT_FIELD、
+            # symbol/offset/lvalue 以及 while/if 回填目标，比内部 AST 调试树更适合展示。
             self.result.annotated_syntax_tree = self._generate_annotated_syntax_tree()
             self.result.backpatch_report = self._generate_backpatch_report()
             
-            # 5. 目标代码生成
+            # 6. 目标代码生成
             if verbose:
                 print("\n" + "=" * 80)
-                print("第五阶段：目标代码生成".center(80))
+                print("第六阶段：目标代码生成".center(80))
                 print("=" * 80)
             
             # 目标代码生成阶段遍历四元式，生成 8086 汇编文本。
@@ -210,27 +217,38 @@ class Compiler:
             print(f"  分析步骤数: {len(records)}")
         
         return True, records
+
+    def ast_construction(self, tokens: List, verbose: bool = True):
+        """AST构建"""
+        try:
+            self.ast_builder = ASTBuilder(tokens)
+            self.ast = self.ast_builder.build()
+            self.result.ast = self.ast
+        except Exception as exc:
+            self.result.errors.append(f"AST构建错误: {exc}")
+            if verbose:
+                print(f"✗ AST构建失败: {exc}")
+            return False, None
+
+        if verbose:
+            print("✓ AST构建成功")
+            print(ASTRenderer().render(self.ast))
+
+        return True, self.ast
     
-    def semantic_analysis(self, tokens: List, verbose: bool = True) -> tuple[bool, SymbolTable]:
+    def semantic_analysis(self, ast, verbose: bool = True) -> tuple[bool, SymbolTable]:
         """语义分析"""
-        # SemanticAnalyzer 内部持有符号表，同时收集语义错误和警告。
-        self.semantic_analyzer = SemanticAnalyzer(tokens)
-        
-        # 当前项目没有把 LL(1) 推导树作为语义输入，而是复用 token 流扫描声明。
-        symbol_table = self.semantic_analyzer.symbol_table
-        # 先检查声明位置是否误用了关键字，比如 int while; 这种情况。
-        self._check_invalid_identifier_usage(tokens)
-        
-        # 扫描 int/float/char/double/struct 等声明，把变量和结构体放入符号表。
-        self._build_symbol_table_from_tokens(tokens, symbol_table)
+        # 语义分析只遍历 AST，不再重新扫描 token。
+        self.semantic_analyzer = ASTSemanticAnalyzer()
+        symbol_table = self.semantic_analyzer.analyze(ast)
         
         self.result.symbol_table = symbol_table
         
-        if self.semantic_analyzer.has_errors():
-            self.result.errors.extend(self.semantic_analyzer.get_all_errors())
+        if self.semantic_analyzer.errors or symbol_table.errors:
+            self.result.errors.extend(self.semantic_analyzer.errors + symbol_table.errors)
             if verbose:
                 print("✗ 语义分析失败")
-                for err in self.semantic_analyzer.get_all_errors():
+                for err in self.semantic_analyzer.errors + symbol_table.errors:
                     print(f"  {err}")
             return False, symbol_table
         
@@ -305,15 +323,16 @@ class Compiler:
             if i == start:
                 i += 1
     
-    def intermediate_code_generation(self, symbol_table: SymbolTable, tokens: List, 
+    def intermediate_code_generation(self, symbol_table: SymbolTable, ast, tokens: List,
                                      verbose: bool = True) -> tuple[bool, IRGenerator]:
         """中间代码生成"""
         # IRGenerator 保存四元式列表、临时变量计数器，并提供 emit/new_temp 等接口。
         self.ir_generator = IRGenerator(symbol_table)
 
-        # 简化版：根据本次输入 token 生成四元式
-        # 真正的控制流、表达式和声明翻译逻辑集中在 _generate_sample_ir。
-        self._generate_sample_ir(tokens)
+        # 中间代码生成只遍历 AST，不再复用 token 流扫描语句。
+        struct_defs = self.ast_builder.struct_defs if self.ast_builder else {}
+        macros = self._collect_object_macros(tokens)
+        ASTIRGenerator(self.ir_generator, struct_defs, macros).generate(ast)
         
         self.result.quadruples = self.ir_generator.quadruples
         

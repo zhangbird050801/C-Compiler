@@ -1,0 +1,52 @@
+PROGRAM  @1
+|-- STRUCT_DECL  "student"  @3
+|   |-- FIELD_DECL  "name"  @4  [type: char*]
+|   |-- FIELD_DECL  "num"  @5  [type: int]
+|   |-- FIELD_DECL  "age"  @6  [type: int]
+|   `-- FIELD_DECL  "score"  @7  [type: int[5]]
+`-- FUNC_DEF  "main"  @10  [return: int]
+    `-- COMPOUND_STMT  @10
+        |-- VAR_DECL  "i"  @11  [type: int]
+        |   `-- LITERAL  "0"  @11
+        |-- VAR_DECL  "max"  @12  [type: int]
+        |   `-- LITERAL  "0"  @12
+        |-- VAR_DECL  "Li"  @13  [type: struct student]
+        |   `-- INIT_LIST  @13
+        |       |-- LITERAL  "Li ping"  @13
+        |       |-- LITERAL  "5"  @13
+        |       |-- LITERAL  "18"  @13
+        |       `-- INIT_LIST  @13
+        |           |-- LITERAL  "80"  @13
+        |           |-- LITERAL  "90"  @13
+        |           |-- LITERAL  "100"  @13
+        |           |-- LITERAL  "86"  @13
+        |           `-- LITERAL  "95"  @13
+        |-- WHILE_STMT  @15  [control: while(i < 5)]
+        |   |-- BINARY_EXPR  "<"  @15
+        |   |   |-- IDENTIFIER  "i"  @15
+        |   |   `-- LITERAL  "5"  @15
+        |   `-- COMPOUND_STMT  @15  [loop_body: execute nested statements, then jump back to while condition]
+        |       |-- IF_STMT  @16  [control: if(Li.score[i] > max)]
+        |       |   |-- BINARY_EXPR  ">"  @16
+        |       |   |   |-- ARRAY_SUBSCRIPT  @16
+        |       |   |   |   |-- MEMBER_EXPR  "score"  @16
+        |       |   |   |   |   `-- IDENTIFIER  "Li"  @16
+        |       |   |   |   `-- IDENTIFIER  "i"  @16
+        |       |   |   `-- IDENTIFIER  "max"  @16
+        |       |   `-- COMPOUND_STMT  @16
+        |       |       `-- EXPR_STMT  @17
+        |       |           `-- ASSIGN_EXPR  "="  @17
+        |       |               |-- IDENTIFIER  "max"  @17
+        |       |               `-- ARRAY_SUBSCRIPT  @17
+        |       |                   |-- MEMBER_EXPR  "score"  @17
+        |       |                   |   `-- IDENTIFIER  "Li"  @17
+        |       |                   `-- IDENTIFIER  "i"  @17
+        |       `-- EXPR_STMT  @19
+        |           `-- UNARY_EXPR  "++"  @19
+        |               `-- IDENTIFIER  "i"  @19
+        |-- EXPR_STMT  @22
+        |   `-- FUNC_CALL  "printf"  @22
+        |       |-- LITERAL  "%d"  @22
+        |       `-- IDENTIFIER  "max"  @22
+        `-- RETURN_STMT  @23
+            `-- LITERAL  "0"  @23
