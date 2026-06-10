@@ -7,7 +7,9 @@ class CodeGenerator:
     """8086汇编代码生成器"""
     
     def __init__(self, ir_generator: IRGenerator, symbol_table: SymbolTable):
+        # ir_gen 提供四元式列表，codegen 的任务就是逐条翻译这些四元式。
         self.ir_gen = ir_generator
+        # symbol_table 用来确定变量、数组、结构体成员的数据段定义。
         self.symbol_table = symbol_table
         self.asm_code: List[str] = []
         self.data_section: List[str] = []
@@ -40,11 +42,13 @@ class CodeGenerator:
         """扫描符号与四元式，标记需要按定点处理的变量/临时变量。"""
         float_vars: Set[str] = set()
 
+        # 先从符号表找出声明为 float/double 的变量。
         for name, symbol in self.symbol_table.global_scope.symbols.items():
             if symbol.kind == SymbolKind.VARIABLE and symbol.type_info:
                 if symbol.type_info.base in ["float", "double"]:
                     float_vars.add(self.normalize_var_name(name))
 
+        # 再从四元式传播浮点属性：浮点赋值或浮点运算结果也要按定点处理。
         for quad in self.ir_gen.quadruples:
             if quad.op == "=":
                 if self.is_float_literal(quad.arg1) or self.normalize_var_name(quad.arg1) in float_vars:
@@ -93,6 +97,7 @@ class CodeGenerator:
     
     def generate_data_section(self):
         """生成数据段"""
+        # 数据段先输出段头，再收集字符串、变量、临时变量和数组定义。
         self.emit_data("DATA SEGMENT")
 
         # 添加字符串字面量（在处理四元式时收集）
@@ -156,7 +161,7 @@ class CodeGenerator:
                 if new_size > old_size:
                     all_vars[name] = var_def
         
-        # 从符号表收集
+        # 从符号表收集源程序里声明过的变量和数组。
         for name, symbol in self.symbol_table.global_scope.symbols.items():
             if symbol.kind == SymbolKind.VARIABLE:
                 if symbol.type_info.is_array():
@@ -173,7 +178,7 @@ class CodeGenerator:
                     # 普通变量
                     add_var(name, "DW 0")
         
-        # 从四元式中提取所有变量（包括结构体成员）
+        # 从四元式中补充收集临时变量、结构体展开变量和数组访问变量。
         for quad in self.ir_gen.quadruples:
             if quad.op == "[]=":
                 size = 50
@@ -225,12 +230,15 @@ class CodeGenerator:
     
     def scan_labels(self):
         """扫描四元式，为跳转目标生成标签"""
+        # 四元式的跳转目标是数字编号；汇编需要把这些编号转换成 L0/L1 这样的标签。
         for i, quad in enumerate(self.ir_gen.quadruples):
             if quad.op.startswith("j"):
                 # 跳转指令
                 if quad.result.isdigit():
+                    # result 是目标四元式编号，例如 goto 17。
                     target = int(quad.result)
                     if target not in self.label_map:
+                        # 第一次遇到该目标时分配一个稳定的汇编标签。
                         self.label_map[target] = f"L{len(self.label_map)}"
             elif quad.op == "label":
                 # 显式标签
@@ -239,6 +247,7 @@ class CodeGenerator:
     
     def generate_code_section(self):
         """生成代码段"""
+        # 输出代码段头和段寄存器初始化。
         self.emit_code("CODE SEGMENT")
         self.emit_code("    ASSUME CS:CODE, DS:DATA, SS:STACK")
         self.emit_code("")
@@ -248,15 +257,19 @@ class CodeGenerator:
         self.emit_code("")
         
         # 扫描并生成标签
+        # 必须先扫描所有四元式，才能知道哪些位置需要输出标签。
         self.scan_labels()
         
         # 遍历四元式生成汇编代码
         for i, quad in enumerate(self.ir_gen.quadruples):
             # 如果这个位置有标签，生成标签
             if i in self.label_map:
+                # 例如 quad 10 是循环入口，会在其前面输出 L2:。
                 self.emit_code(f"{self.label_map[i]}:")
             
+            # 每条四元式前输出注释，方便从 output.asm 反查四元式来源。
             self.emit_comment(f"[{i}] {quad}")
+            # 真正翻译单条四元式。
             self.translate_quadruple(quad, i)
             self.emit_code("")
         
@@ -267,19 +280,23 @@ class CodeGenerator:
     
     def translate_quadruple(self, quad: Quadruple, index: int):
         """翻译单个四元式为汇编代码"""
+        # 四元式格式固定为 (op, arg1, arg2, result)，这里先拆出来分发。
         op = quad.op
         arg1, arg2, result = quad.arg1, quad.arg2, quad.result
         
         if op == "=":
             # 赋值操作
+            # 形如 (=, rhs, _, lhs)，翻译成 MOV AX,rhs; MOV lhs,AX。
             self.gen_assignment(arg1, result)
         
         elif op in ["+", "-", "*", "/", "%"]:
             # 算术运算
+            # 形如 (+, a, b, t)，翻译成寄存器运算并把结果写入 t。
             self.gen_arithmetic(op, arg1, arg2, result)
         
         elif op.startswith("j"):
             # 跳转指令
+            # j 是无条件跳转，j< / j>= 等是条件跳转。
             self.gen_jump(op, arg1, arg2, result)
         
         elif op == "call":
@@ -298,6 +315,7 @@ class CodeGenerator:
         
         elif op == "printf":
             # printf调用
+            # result 保存要输出的字符串、变量或常量。
             self.gen_printf(result)
 
         elif op == "printf_c":
@@ -318,10 +336,12 @@ class CodeGenerator:
         
         elif op == "=[]":
             # 数组读取 result = array[index]
+            # 形如 (=[], arr, idx, t)，翻译成按 idx 计算偏移后读取 arr[idx]。
             self.gen_array_load(arg1, arg2, result)
         
         elif op == "[]=":
             # 数组赋值 array[index] = value
+            # 形如 ([]=, value, idx, arr)，翻译成按 idx 计算偏移后写 arr[idx]。
             self.gen_array_store(result, arg2, arg1)
         
         elif op == "label":
@@ -333,11 +353,13 @@ class CodeGenerator:
     
     def gen_assignment(self, source: str, dest: str):
         """生成赋值代码"""
+        # dest_name 是适合汇编使用的目标变量名，例如 Li.score 会规范化成 Li_score。
         dest_name = self.normalize_var_name(dest)
         dest_is_float = self.is_float_operand(dest)
 
         # 处理源操作数
         if self.is_number(source):
+            # 数字源操作数直接装入 AX；浮点数按定点规则缩放或四舍五入。
             if self.is_float_literal(source):
                 try:
                     if dest_is_float:
@@ -357,9 +379,11 @@ class CodeGenerator:
             # 字符串字面量（可能包含内部引号）
             # 提取引号之间的内容
             str_content = source[1:-1] if source.endswith('"') else source[1:]
+            # 字符串放入数据段，AX 中保存字符串偏移地址。
             label = self.add_string_literal(str_content)
             self.emit_code(f"    MOV AX, OFFSET {label}")
         else:
+            # 变量或临时变量源操作数：从内存读到 AX。
             src_name = self.normalize_var_name(source)
             self.emit_code(f"    MOV AX, {src_name}")
 
@@ -375,13 +399,16 @@ class CodeGenerator:
         # 处理目标操作数
         if "[" in dest and "]" in dest:
             # 数组访问 - 去掉点号
+            # 当前简化实现把复杂数组目标规范化成普通符号写回。
             var_name = self.normalize_var_name(dest)
             self.emit_code(f"    MOV {var_name}, AX")
         else:
+            # 普通赋值：把 AX 写入目标变量。
             self.emit_code(f"    MOV {dest_name}, AX")
     
     def gen_arithmetic(self, op: str, arg1: str, arg2: str, result: str):
         """生成算术运算代码"""
+        # 只要任一操作数或结果是浮点，就用定点缩放模式处理。
         float_mode = self.is_float_operand(arg1) or self.is_float_operand(arg2) or self.is_float_operand(result)
 
         if float_mode:
@@ -437,7 +464,7 @@ class CodeGenerator:
             self.emit_code(f"    MOV {self.normalize_var_name(result)}, AX")
             return
 
-        # 加载第一个操作数到AX
+        # 整数模式：加载第一个操作数到 AX。
         if self.is_number(arg1):
             # 处理浮点数：四舍五入
             if '.' in arg1:
@@ -451,7 +478,7 @@ class CodeGenerator:
         else:
             self.emit_code(f"    MOV AX, {arg1}")
         
-        # 加载第二个操作数到BX
+        # 加载第二个操作数到 BX。
         if self.is_number(arg2):
             if '.' in arg2:
                 try:
@@ -464,7 +491,7 @@ class CodeGenerator:
         else:
             self.emit_code(f"    MOV BX, {arg2}")
         
-        # 执行运算
+        # 根据 op 选择 8086 算术指令。
         if op == "+":
             self.emit_code(f"    ADD AX, BX")
         elif op == "-":
@@ -479,18 +506,20 @@ class CodeGenerator:
             self.emit_code(f"    IDIV BX")
             self.emit_code(f"    MOV AX, DX  ; 余数在DX中")
         
-        # 存储结果
+        # 运算结果统一保存在 AX，最后写入 result。
         self.emit_code(f"    MOV {self.normalize_var_name(result)}, AX")
     
     def gen_jump(self, op: str, arg1: str, arg2: str, label: str):
         """生成跳转代码"""
         if op == "j":
             # 无条件跳转
+            # label 如果是四元式编号，先查 label_map 转成 L0/L1 这样的汇编标签。
             target = self.label_map.get(int(label) if label.isdigit() else -1, label)
             self.emit_code(f"    JMP {target}")
         else:
             # 条件跳转
             # 比较arg1和arg2
+            # 条件跳转先把左右操作数分别装入 AX/BX，再 CMP。
             float_compare = self.is_float_operand(arg1) or self.is_float_operand(arg2)
             if self.is_number(arg1):
                 left_value = round(float(arg1) * self.fixed_scale) if float_compare else int(float(arg1))
@@ -507,6 +536,7 @@ class CodeGenerator:
             self.emit_code(f"    CMP AX, BX")
             
             # 根据操作符选择跳转指令
+            # 四元式 j>= 对应汇编 JGE，j<= 对应 JLE。
             target = self.label_map.get(int(label) if label.isdigit() else -1, label)
             jump_map = {
                 "j<": "JL",
@@ -541,6 +571,7 @@ class CodeGenerator:
         """生成printf输出代码"""
         if arg.startswith('"') and arg.endswith('"'):
             # 字符串字面量
+            # 字符串输出时把字符串放入数据段，AX 保存 OFFSET，再调用 dispmsg。
             label = self.add_string_literal(arg[1:-1])
             self.emit_code(f"    MOV AX, OFFSET {label}")
             self.emit_code(f"    CALL dispmsg")
@@ -563,6 +594,7 @@ class CodeGenerator:
                     self.emit_code(f"    MOV AX, {int_val}")
             else:
                 # 清理变量名
+                # 变量输出时把变量值装入 AX，再根据类型调用整数/字符/浮点输出过程。
                 clean_var = self.normalize_var_name(arg)
                 self.emit_code(f"    MOV AX, {clean_var}")
 
@@ -578,44 +610,54 @@ class CodeGenerator:
                 self.emit_code(f"    MOV CX, {precision}")
                 self.emit_code(f"    CALL dispsf  ; 输出AX中的定点小数")
             else:
+                # 当前 c-code.c 的 printf("%d", max) 最终走这里，调用整数输出。
                 self.emit_code(f"    CALL dispsiw  ; 输出AX中的数字")
     
     def gen_array_load(self, array: str, index: str, result: str):
         """生成数组读取代码"""
         # result = array[index]
         # 清理数组名（去掉点号）
+        # 结构体成员数组 Li.score 在 IR 中已经展开为 Li_score。
         clean_array = array.replace('.', '_')
         
         if self.is_number(index):
+            # 常量下标可以编译期直接换算成字节偏移；DW 元素占 2 字节。
             offset = int(index) * 2  # 假设每个元素2字节
             self.emit_code(f"    MOV AX, {clean_array}[{offset}]")
         else:
+            # 变量下标运行时计算偏移：BX = index * 2。
             self.emit_code(f"    MOV BX, {index}")
             self.emit_code(f"    SHL BX, 1  ; 乘以2")
             self.emit_code(f"    MOV AX, {clean_array}[BX]")
         
+        # 数组元素读入 AX 后，写入四元式指定的临时变量 result。
         self.emit_code(f"    MOV {result}, AX")
     
     def gen_array_store(self, array: str, index: str, value: str):
         """生成数组赋值代码"""
         # array[index] = value
         # 清理数组名
+        # 写数组时同样先把数组名规范化，避免结构体点号影响汇编符号。
         clean_array = array.replace('.', '_')
         
         # 处理值
         try:
+            # 常量值先转成整数装入 AX。
             # 尝试转换为浮点数，使用四舍五入
             float_val = float(value)
             int_val = round(float_val)
             self.emit_code(f"    MOV AX, {int_val}  ; 浮点数 {value} 四舍五入")
         except ValueError:
             # 不是数字，是变量名
+            # 变量值从内存装入 AX。
             self.emit_code(f"    MOV AX, {value}")
         
         if self.is_number(index):
+            # 常量下标直接写固定偏移。
             offset = int(index) * 2
             self.emit_code(f"    MOV {clean_array}[{offset}], AX")
         else:
+            # 变量下标运行时换算成字节偏移后写入。
             self.emit_code(f"    MOV BX, {index}")
             self.emit_code(f"    SHL BX, 1")
             self.emit_code(f"    MOV {clean_array}[BX], AX")
@@ -837,6 +879,7 @@ class CodeGenerator:
     
     def generate(self) -> str:
         """生成完整的汇编代码"""
+        # 每次生成前清空上一次的段内容、字符串表和标签映射。
         self.asm_code.clear()
         self.data_section.clear()
         self.stack_section.clear()
@@ -845,17 +888,17 @@ class CodeGenerator:
         self.string_count = 0
         self.label_map.clear()
         
-        # 生成代码段（会收集字符串字面量）
+        # 生成代码段（翻译 printf 时会顺便收集字符串字面量）。
         self.generate_code_section()
         
-        # 生成辅助函数
+        # 生成辅助函数，例如整数输出、字符串输出和输入整数。
         self.generate_helpers()
 
         # 关闭代码段（辅助函数也在代码段内）
         self.emit_code("CODE ENDS")
         self.emit_code("")
         
-        # 生成数据段
+        # 生成数据段；此时字符串表和四元式临时变量都已经收集完。
         self.generate_data_section()
         self.stack_section.extend([
             "STACK SEGMENT PARA STACK 'STACK'",
@@ -864,7 +907,7 @@ class CodeGenerator:
             "",
         ])
         
-        # 组合
+        # 按 MASM 风格组合数据段、栈段、代码段和 END START。
         self.asm_code.extend(self.data_section)
         self.asm_code.extend(self.stack_section)
         self.asm_code.extend(self.code_section)

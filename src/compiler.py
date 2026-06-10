@@ -69,8 +69,11 @@ class Compiler:
         Returns:
             CompilerResult: 编译结果
         """
+        # 每次编译都重新创建结果对象，避免上一次编译残留 token/四元式/错误。
         self.result = CompilerResult()
+        # 先规范化中文全角标点，保证后续词法分析只面对标准 C 风格符号。
         source_code = self._normalize_source(source_code)
+        # 保存规范化后的源码，后面生成带注释语法树时还要读取源码行。
         self.source_code = source_code
         
         try:
@@ -80,6 +83,7 @@ class Compiler:
                 print("第一阶段：词法分析".center(80))
                 print("=" * 80)
             
+            # 词法分析把字符流转换成 token 流，后续所有阶段都基于 tokens 工作。
             success, tokens = self.lexical_analysis(source_code, verbose)
             if not success:
                 return self.result
@@ -90,6 +94,7 @@ class Compiler:
                 print("第二阶段：语法分析".center(80))
                 print("=" * 80)
             
+            # LL(1) 语法分析检查 token 排列是否符合文法，并记录推导步骤。
             success, parse_records = self.syntax_analysis(tokens, verbose)
             if not success:
                 # 当前语法分析器覆盖面有限，失败时进入容错翻译模式
@@ -107,6 +112,7 @@ class Compiler:
                 print("第三阶段：语义分析".center(80))
                 print("=" * 80)
             
+            # 语义分析在同一批 tokens 上建立符号表，记录变量/数组/结构体类型信息。
             success, symbol_table = self.semantic_analysis(tokens, verbose)
             if not success:
                 return self.result
@@ -117,6 +123,7 @@ class Compiler:
                 print("第四阶段：中间代码生成".center(80))
                 print("=" * 80)
             
+            # 中间代码生成把声明、表达式、if/while/for 等翻译为四元式。
             success, ir_gen = self.intermediate_code_generation(symbol_table, tokens, verbose)
             if not success:
                 return self.result
@@ -129,10 +136,12 @@ class Compiler:
                 print("第五阶段：目标代码生成".center(80))
                 print("=" * 80)
             
+            # 目标代码生成阶段遍历四元式，生成 8086 汇编文本。
             success, asm_code = self.target_code_generation(ir_gen, symbol_table, verbose)
             if not success:
                 return self.result
             
+            # 所有阶段都成功后，才把最终结果标记为成功。
             self.result.success = True
             
             if verbose:
@@ -204,14 +213,15 @@ class Compiler:
     
     def semantic_analysis(self, tokens: List, verbose: bool = True) -> tuple[bool, SymbolTable]:
         """语义分析"""
+        # SemanticAnalyzer 内部持有符号表，同时收集语义错误和警告。
         self.semantic_analyzer = SemanticAnalyzer(tokens)
         
-        # 这里应该遍历语法分析的结果构建符号表
-        # 简化版：直接从tokens提取信息
+        # 当前项目没有把 LL(1) 推导树作为语义输入，而是复用 token 流扫描声明。
         symbol_table = self.semantic_analyzer.symbol_table
+        # 先检查声明位置是否误用了关键字，比如 int while; 这种情况。
         self._check_invalid_identifier_usage(tokens)
         
-        # 简化的符号表构建（仅作示例）
+        # 扫描 int/float/char/double/struct 等声明，把变量和结构体放入符号表。
         self._build_symbol_table_from_tokens(tokens, symbol_table)
         
         self.result.symbol_table = symbol_table
@@ -298,9 +308,11 @@ class Compiler:
     def intermediate_code_generation(self, symbol_table: SymbolTable, tokens: List, 
                                      verbose: bool = True) -> tuple[bool, IRGenerator]:
         """中间代码生成"""
+        # IRGenerator 保存四元式列表、临时变量计数器，并提供 emit/new_temp 等接口。
         self.ir_generator = IRGenerator(symbol_table)
 
         # 简化版：根据本次输入 token 生成四元式
+        # 真正的控制流、表达式和声明翻译逻辑集中在 _generate_sample_ir。
         self._generate_sample_ir(tokens)
         
         self.result.quadruples = self.ir_generator.quadruples
@@ -314,6 +326,7 @@ class Compiler:
     def target_code_generation(self, ir_gen: IRGenerator, symbol_table: SymbolTable,
                                verbose: bool = True) -> tuple[bool, str]:
         """目标代码生成"""
+        # CodeGenerator 会扫描四元式、分配汇编标签，并生成数据段/代码段/栈段。
         self.code_generator = CodeGenerator(ir_gen, symbol_table)
         asm_code = self.code_generator.generate()
         
@@ -499,9 +512,12 @@ class Compiler:
     
     def _generate_sample_ir(self, tokens: List):
         """根据当前 token 生成中间代码（简化版，支持顺序/选择/循环/输入输出）。"""
+        # 为了少写 self.ir_generator，这里取局部变量 ir；所有四元式都追加到 ir.quadruples。
         ir = self.ir_generator
+        # 每次重新生成 IR 前清空旧四元式、临时变量计数和错误信息。
         ir.clear()
 
+        # 这些 token 类型可以直接作为表达式里的操作数。
         supported_value_types = {
             "STRING_LITERAL",
             "IDENTIFIER",
@@ -511,19 +527,28 @@ class Compiler:
             "CONST_FLOAT",
             "CONST_CHAR",
         }
+        # 内置类型关键字，用于判断当前 token 是否开启变量声明或函数定义。
         type_keywords = {"int", "float", "double", "char", "void", "long", "short", "signed", "unsigned"}
+        # 条件判断支持的比较运算符。
         compare_ops = {"<", ">", "<=", ">=", "==", "!="}
+        # 控制流生成采用“条件为假则跳出/跳过”的方式，所以要把条件操作符取反。
         inverse_compare = {"<": ">=", ">": "<=", "<=": ">", ">=": "<", "==": "!=", "!=": "=="}
 
+        # 收集 #define 这类简单宏，表达式里遇到宏名时可以替换为宏值。
         object_macros = self._collect_object_macros(tokens)
+        # IR 阶段不处理预处理指令、EOF 和 const，先过滤掉简化后续扫描。
         filtered_tokens = [
             t for t in tokens
             if TYPES.get(t.type, "") not in {"PREPROCESSOR", "EOF"} and t.attribute != "const"
         ]
+        # n 是过滤后 token 数量，i 是当前扫描位置。
         n = len(filtered_tokens)
         i = 0
+        # 结构体定义用于后面把 struct 初始化展开成成员赋值。
         struct_defs = self._collect_struct_defs(filtered_tokens)
+        # 自定义类型名集合，比如当前程序里的 student。
         custom_type_names = set(struct_defs)
+        # 表达式缓存用于复用同一条复杂引用，例如 if 条件和 then 内的 Li.score[i]。
         expr_cache = {}
 
         def tok_type(idx: int) -> str:
@@ -561,18 +586,23 @@ class Compiler:
             return str(ord(char_token[-1]))
 
         def token_to_operand(tok):
+            # 把单个 token 转成四元式操作数；不支持的 token 返回 None。
             ttype = TYPES.get(tok.type, "")
             if ttype not in supported_value_types:
                 return None
             if ttype == "STRING_LITERAL":
+                # 字符串在四元式里保留引号，后续 codegen 会放入数据段字符串表。
                 return f'"{tok.attribute}"'
             if ttype == "CONST_CHAR":
+                # 字符常量转成 ASCII/转义字符整数值，方便用 8086 整数处理。
                 return char_token_to_int(tok.attribute)
             if ttype == "IDENTIFIER" and tok.attribute in object_macros:
+                # 简单宏名在这里替换成宏值。
                 return object_macros[tok.attribute]
             return tok.attribute
 
         def expr_cache_key(expr_tokens):
+            # 只缓存数组/成员访问这类有副作用式四元式生成成本的表达式。
             if not expr_tokens:
                 return None
             attrs = tuple(t.attribute for t in expr_tokens)
@@ -963,21 +993,27 @@ class Compiler:
                     clear_expr_cache()
 
         def parse_declaration(type_name: str, is_struct_type: bool):
+            # 解析变量声明；type_name 是 int/student 等类型名，is_struct_type 标记是否结构体变量。
             nonlocal i
+            # 当前 i 指向类型名，先移动到声明的第一个变量名。
             i += 1
             while i < n and tok_attr(i) != ";":
+                # 跳过指针星号，当前 IR 只保留变量名展开，不单独生成指针操作。
                 while tok_attr(i) == "*":
                     i += 1
 
                 if tok_type(i) != "IDENTIFIER":
+                    # 声明中如果遇到非标识符，跳过以保持扫描继续。
                     i += 1
                     continue
 
+                # 记录当前声明的变量名，例如 i、max、Li。
                 var_name = tok_attr(i)
                 array_size = None
                 i += 1
 
                 if tok_attr(i) == "[":
+                    # 处理数组声明后缀，例如 score[5]。
                     i += 1
                     if tok_type(i) in {"CONST_DECIMAL", "CONST_OCTAL", "CONST_HEX"}:
                         array_size = int(tok_attr(i), 0)
@@ -987,6 +1023,7 @@ class Compiler:
                         i += 1
 
                 if tok_attr(i) == "=":
+                    # 收集初始化表达式；结构体/数组初始化里可能有嵌套大括号，所以用 depth 控制层级。
                     i += 1
                     init_tokens = []
                     depth = 0
@@ -1002,10 +1039,13 @@ class Compiler:
                         i += 1
 
                     if is_struct_type:
+                        # 结构体初始化展开成成员赋值，例如 Li_name、Li_num、Li_score[i]。
                         emit_struct_initializer(type_name, var_name, array_size, init_tokens)
                     elif array_size is not None:
+                        # 数组初始化逐个元素生成 []= 四元式。
                         emit_array_initializer(var_name, array_size, init_tokens)
                     else:
+                        # 普通变量初始化生成一条赋值四元式。
                         rhs = emit_expr(init_tokens)
                         if rhs is not None:
                             ir.emit("=", rhs, "_", var_name)
@@ -1020,18 +1060,22 @@ class Compiler:
                 i += 1
 
         def parse_statement():
+            # parse_statement 是 IR 生成阶段的语句分发器，根据当前 token 判断语句类型。
             nonlocal i
             if i >= n:
                 return
 
+            # 读取当前 token 的文本和值类别，后续分支都根据它判断语句种类。
             cur_attr = tok_attr(i)
             cur_type = tok_type(i)
 
             if cur_attr == "}":
+                # 当前代码块结束，消费右大括号后返回外层。
                 i += 1
                 return
 
             if cur_attr == "{":
+                # 复合语句块：递归解析块内每一条语句，直到遇到匹配的 }。
                 i += 1
                 while i < n and tok_attr(i) != "}":
                     parse_statement()
@@ -1040,6 +1084,7 @@ class Compiler:
                 return
 
             if cur_attr == "struct" and tok_attr(i + 2) == "{":
+                # 结构体类型定义不生成可执行四元式，直接跳过整个 struct {...};。
                 i += 3
                 depth = 1
                 while i < n and depth > 0:
@@ -1053,21 +1098,25 @@ class Compiler:
                 return
 
             if cur_attr == "struct" and tok_type(i + 1) == "IDENTIFIER" and tok_attr(i + 1) in custom_type_names:
+                # struct student Li = ... 这种结构体变量声明，移动到 student 后按声明处理。
                 i += 1
                 parse_declaration(tok_attr(i), True)
                 return
 
             if cur_type == "IDENTIFIER" and cur_attr in custom_type_names:
+                # 支持 typedef/自定义类型名开头的结构体变量声明。
                 parse_declaration(cur_attr, True)
                 return
 
             if cur_attr in type_keywords and not (tok_type(i + 1) == "IDENTIFIER" and tok_attr(i + 2) == "("):
+                # int i = 0; 这类普通变量声明。
                 parse_declaration(cur_attr, False)
                 return
 
             if cur_attr in type_keywords:
                 # 函数定义：type ident(...){...}
                 if tok_type(i + 1) == "IDENTIFIER" and tok_attr(i + 2) == "(":
+                    # 跳过函数参数列表，随后递归解析函数体代码块。
                     _, next_idx = parse_parenthesized_tokens(i + 2)
                     i = next_idx
                     if tok_attr(i) == "{":
@@ -1107,9 +1156,11 @@ class Compiler:
                 return
 
             if cur_attr == "printf":
+                # printf 的括号参数先整体取出，再按顶层逗号拆成格式串和实参。
                 _, after_paren = parse_parenthesized_tokens(i + 1)
                 arg_tokens, _ = parse_parenthesized_tokens(i + 1)
                 arg_exprs = [part for part in split_top_level(arg_tokens, ",") if part]
+                # 根据格式串类型生成 printf/printf_c/printf_f 等输出四元式。
                 parse_printf_from_args(arg_exprs)
                 i = after_paren
                 if tok_attr(i) == ";":
@@ -1130,70 +1181,102 @@ class Compiler:
                 return
 
             if cur_attr == "if":
+                # 先取出 if(...) 括号中的条件 token。
                 cond_tokens, after_cond = parse_parenthesized_tokens(i + 1)
+                # 条件会被整理成 (left, op, right)，复杂左值会先生成取值四元式。
                 cond = parse_condition_tokens(cond_tokens)
+                # 条件解析完成后，扫描位置移动到 then 语句开头。
                 i = after_cond
                 if cond is None:
+                    # 条件不支持时仍尝试翻译 then 语句，保持容错。
                     parse_statement()
                     return
 
+                # 生成 if 假出口：条件为假时跳过 then 块，目标先占位。
                 false_jumps = emit_false_jumps(cond)
+                # 翻译 then 语句或 then 代码块。
                 parse_statement()
                 if tok_attr(i) == "else":
+                    # 有 else 时，then 结束后要无条件跳过 else。
                     j_end = ir.emit("j", "_", "_", "0")
+                    # if 假出口回填到 else 开始位置。
                     patch_jumps(false_jumps, ir.next_quad())
                     i += 1
+                    # 翻译 else 语句或 else 代码块。
                     parse_statement()
+                    # then 末尾的无条件跳转回填到整个 if-else 后面。
                     patch_jump(j_end, ir.next_quad())
                 else:
+                    # 无 else 时，if 假出口直接回填到 then 块之后。
                     patch_jumps(false_jumps, ir.next_quad())
                 return
 
             if cur_attr == "while":
+                # cond_start 是循环条件入口，循环体结束后要跳回这里。
                 cond_start = ir.next_quad()
+                # 取出 while(...) 中的条件 token。
                 cond_tokens, after_cond = parse_parenthesized_tokens(i + 1)
+                # 解析条件，例如 i < 5 -> ("i", "<", "5")。
                 cond = parse_condition_tokens(cond_tokens)
+                # 条件结束后，i 指向循环体开始位置。
                 i = after_cond
                 if cond is None:
+                    # 条件无法翻译时仍解析循环体，避免卡死。
                     parse_statement()
                     return
 
+                # 生成 while 假出口：条件为假时跳到循环后面，目标先占位。
                 false_jumps = emit_false_jumps(cond)
+                # 翻译循环体，里面可以递归处理 if、块、赋值、自增等语句。
                 parse_statement()
+                # 循环体结束后无条件跳回条件入口。
                 ir.emit("j", "_", "_", str(cond_start))
+                # 此时 next_quad 就是循环出口，把假出口回填到这里。
                 patch_jumps(false_jumps, ir.next_quad())
                 return
 
             if cur_attr == "for":
+                # for(init; cond; step) 先把括号内容取出。
                 inside_tokens, after_cond = parse_parenthesized_tokens(i + 1)
+                # 按顶层分号拆成初始化、条件、步进三段。
                 sections = split_top_level(inside_tokens, ";")
                 while len(sections) < 3:
                     sections.append([])
 
+                # 先翻译初始化语句，例如 i = 0。
                 parse_inline_assignment(sections[0])
+                # 记录 for 条件入口，step 结束后要跳回这里。
                 cond_start = ir.next_quad()
                 false_jumps = []
                 if sections[1]:
+                    # 有条件段时生成假出口，没有条件段则视为无限循环。
                     cond = parse_condition_tokens(sections[1])
                     if cond is not None:
                         false_jumps = emit_false_jumps(cond)
 
+                # 移到循环体开头并翻译循环体。
                 i = after_cond
                 parse_statement()
+                # 循环体之后翻译 step，例如 i++。
                 parse_inline_assignment(sections[2])
+                # step 后跳回条件入口。
                 ir.emit("j", "_", "_", str(cond_start))
+                # 条件假出口回填到 for 循环结束位置。
                 patch_jumps(false_jumps, ir.next_quad())
                 return
 
             if cur_attr == "return":
+                # return 后面的表达式一直收集到分号。
                 i += 1
                 expr_tokens = []
                 while i < n and tok_attr(i) != ";":
                     expr_tokens.append(filtered_tokens[i])
                     i += 1
+                # 有返回值就翻译表达式，没有返回值就用 "_"。
                 ret_val = emit_expr(expr_tokens) if expr_tokens else "_"
                 if ret_val is None:
                     ret_val = "_"
+                # 生成 return 四元式，后续 codegen 会翻译成 MOV AX + JMP EXIT。
                 ir.emit("return", ret_val, "_", "_")
                 if tok_attr(i) == ";":
                     i += 1
@@ -1202,12 +1285,14 @@ class Compiler:
             if cur_type == "IDENTIFIER":
                 # 赋值语句
                 if tok_attr(i + 1) == "=":
+                    # 当前简化实现只处理普通标识符左值，例如 max = expr。
                     lhs = tok_attr(i)
                     i += 2
                     expr_tokens = []
                     while i < n and tok_attr(i) != ";":
                         expr_tokens.append(filtered_tokens[i])
                         i += 1
+                    # 先翻译右值表达式，再生成赋值四元式。
                     rhs = emit_expr(expr_tokens)
                     if rhs is not None:
                         ir.emit("=", rhs, "_", lhs)
@@ -1218,6 +1303,7 @@ class Compiler:
 
                 # 自增自减语句
                 if tok_attr(i + 1) in {"++", "--"}:
+                    # i++ 会被拆成 T = i + 1 和 i = T 两条四元式。
                     parse_inline_assignment([filtered_tokens[i], filtered_tokens[i + 1]])
                     clear_expr_cache()
                     i += 2
@@ -1856,7 +1942,6 @@ class Compiler:
 
 
 def main():
-    """测试编译器"""
     # 读取示例C代码
     with open('c-code.c', 'r', encoding='utf-8') as f:
         source_code = f.read()
