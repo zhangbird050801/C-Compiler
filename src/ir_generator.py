@@ -7,6 +7,7 @@ from constants import TYPES, EOF
 @dataclass
 class Quadruple:
     """四元式 (操作符, 参数1, 参数2, 结果)"""
+    # 统一用 (op, arg1, arg2, result) 表示中间代码，便于后续 codegen 按 op 分发。
     op: str
     arg1: str
     arg2: str
@@ -55,6 +56,7 @@ class IRGenerator:
     """中间代码生成器"""
     
     def __init__(self, symbol_table: SymbolTable):
+        # IRGenerator 只负责管理四元式序列和临时变量编号，不直接理解完整 AST。
         self.symbol_table = symbol_table
         self.quadruples: List[Quadruple] = []
         self.temp_count = 0
@@ -67,6 +69,7 @@ class IRGenerator:
     
     def new_temp(self) -> str:
         """生成新的临时变量"""
+        # 表达式中间结果统一放入 T1、T2...，后续汇编生成会把它们加入数据段。
         self.temp_count += 1
         return f"T{self.temp_count}"
     
@@ -77,18 +80,21 @@ class IRGenerator:
     
     def emit(self, op: str, arg1: str = "_", arg2: str = "_", result: str = "_", line: int = 0):
         """生成一条四元式"""
+        # 返回当前四元式编号，控制流生成时会保存这个编号用于后续回填。
         quad = Quadruple(op, arg1, arg2, result, line)
         self.quadruples.append(quad)
         return len(self.quadruples) - 1
     
     def backpatch(self, quad_list: List[int], label: str):
         """回填"""
+        # 回填就是把先前占位的跳转目标改成最终目标，例如 while 假出口改成循环后第一条。
         for idx in quad_list:
             if idx < len(self.quadruples):
                 self.quadruples[idx].result = label
     
     def next_quad(self) -> int:
         """返回下一条四元式的位置"""
+        # next_quad 常用于记录循环入口或计算“当前语句结束后的下一条编号”。
         return len(self.quadruples)
     
     def gen_assignment(self, lhs: str, rhs: str, line: int = 0):
@@ -135,12 +141,12 @@ class IRGenerator:
     
     def gen_array_access(self, array_name: str, index: str, result: str, line: int = 0):
         """生成数组访问"""
-        # array[index] -> result = array[index]
+        # array[index] -> result = array[index]，例如 T1 = Li_score[i]。
         self.emit("=[]", array_name, index, result, line)
     
     def gen_array_store(self, array_name: str, index: str, value: str, line: int = 0):
         """生成数组赋值"""
-        # array[index] = value
+        # array[index] = value，例如 Li_score[2] = 100。
         self.emit("[]=", value, index, array_name, line)
     
     def gen_struct_access(self, struct_var: str, member: str, result: str, line: int = 0):

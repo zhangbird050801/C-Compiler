@@ -23,6 +23,7 @@ class ASTNode:
 class ASTBuilder:
     """Build a compact AST from the token stream after LL(1) validation."""
 
+    # AST 构建阶段只关心结构，不做求值；这些集合用于识别类型、比较运算和表达式优先级。
     type_keywords = {"int", "float", "double", "char", "void", "long", "short", "signed", "unsigned"}
     compare_ops = {"<", ">", "<=", ">=", "==", "!="}
     binary_precedence = [
@@ -36,6 +37,7 @@ class ASTBuilder:
     ]
 
     def __init__(self, tokens: List):
+        # 预处理指令和 EOF 不参与 AST 结构构造，const 在当前简化实现里也不单独建节点。
         self.tokens = [
             t for t in tokens
             if TYPES.get(t.type, "") not in {"PREPROCESSOR", "EOF"} and t.attribute != "const"
@@ -60,6 +62,7 @@ class ASTBuilder:
         return 0
 
     def build(self) -> ASTNode:
+        # 从顶层顺序扫描：结构体定义、函数定义和少量全局语句都会挂到 PROGRAM 下。
         root = ASTNode("PROGRAM", line=1)
         while self.i < self.n:
             if self.attr(self.i) == "struct" and self.ttype(self.i + 1) == "IDENTIFIER" and self.attr(self.i + 2) == "{":
@@ -91,6 +94,7 @@ class ASTBuilder:
         return self.n - 1
 
     def collect_until(self, stops: set) -> List:
+        # 收集一段表达式/初始化 token；用 depth 避免在括号、数组、初始化列表内部提前停止。
         start = self.i
         depth = 0
         while self.i < self.n:
@@ -133,6 +137,7 @@ class ASTBuilder:
         return token_list
 
     def parse_type_at(self, idx: int) -> Tuple[Optional[str], int, bool]:
+        # 识别内置类型、struct 类型，以及前面已经记录过的结构体类型名。
         if self.attr(idx) == "struct" and self.ttype(idx + 1) == "IDENTIFIER":
             return self.attr(idx + 1), idx + 2, True
         if self.ttype(idx) == "KEYWORD" and self.attr(idx) in self.type_keywords:
@@ -142,6 +147,7 @@ class ASTBuilder:
         return None, idx, False
 
     def parse_declarator_at(self, idx: int) -> Tuple[Optional[Dict[str, Any]], int]:
+        # 解析声明符中的指针星号、变量名和数组维度，例如 char *name 或 int score[5]。
         pointer = 0
         while self.attr(idx) == "*":
             pointer += 1
@@ -161,6 +167,7 @@ class ASTBuilder:
         return decl, idx
 
     def parse_struct_decl(self) -> ASTNode:
+        # struct 定义本身不生成可执行语句，但会记录成员顺序，后面展开结构体初始化时要用。
         line = self.line(self.i)
         name = self.attr(self.i + 1)
         self.i += 3
@@ -196,6 +203,7 @@ class ASTBuilder:
         return ASTNode("STRUCT_DECL", name, children=children, line=line, attrs={"fields": fields})
 
     def try_parse_function(self) -> Optional[ASTNode]:
+        # 函数定义形如 type name(...) { ... }；当前只保留函数名、返回类型和函数体 AST。
         ret_type, after_type, _ = self.parse_type_at(self.i)
         if ret_type is None or self.ttype(after_type) != "IDENTIFIER" or self.attr(after_type + 1) != "(":
             return None
@@ -207,6 +215,7 @@ class ASTBuilder:
         return ASTNode("FUNC_DEF", name, children=[body], line=line, attrs={"return_type": ret_type})
 
     def parse_statement(self) -> Optional[ASTNode]:
+        # 语句分发入口：根据当前 token 选择 if/while/return/block/decl/expr 等解析函数。
         if self.i >= self.n:
             return None
         a = self.attr(self.i)
@@ -240,6 +249,7 @@ class ASTBuilder:
         return ASTNode("EXPR_STMT", children=[self.parse_expr(expr_tokens)], line=line)
 
     def parse_block(self) -> ASTNode:
+        # 复合语句 { ... } 会递归收集内部语句，形成 COMPOUND_STMT 子树。
         line = self.line(self.i)
         self.i += 1
         children = []
@@ -254,6 +264,7 @@ class ASTBuilder:
         return ASTNode("COMPOUND_STMT", children=children, line=line)
 
     def parse_declaration(self) -> ASTNode:
+        # 变量声明会保留类型、指针层级、数组维度，并把初始化表达式挂为子节点。
         type_name, after_type, is_struct = self.parse_type_at(self.i)
         line = self.line(self.i)
         self.i = after_type
@@ -288,27 +299,44 @@ class ASTBuilder:
         return ASTNode("DECL_STMT", children=decl_nodes, line=line)
 
     def parse_initializer(self, token_list: List) -> ASTNode:
+        # 大括号初始化列表递归展开成 INIT_LIST；普通初始化直接按表达式解析。
         if len(token_list) >= 2 and token_list[0].attribute == "{" and token_list[-1].attribute == "}":
             children = [self.parse_initializer(part) for part in self.split_top_level(self.strip_outer_braces(token_list), ",") if part]
             return ASTNode("INIT_LIST", children=children, line=token_list[0].line)
         return self.parse_expr(token_list)
 
     def parse_if(self) -> ASTNode:
+        # if 节点固定组织为：条件、then 分支，以及可选的 else 分支。
+        # 记录 if 关键字所在行号，后面 ASTRenderer 和报错信息会用到。
         line = self.line(self.i)
+        # 从 if 后面的括号中取出条件 token，例如 Li.score[i] > max。
         cond_tokens, after_cond = self.collect_parenthesized(self.i + 1)
+        # 条件括号解析完后，把扫描位置移动到 then 语句或 then 代码块开头。
         self.i = after_cond
+        # 解析 then 分支；它可以是单条语句，也可以是 { ... } 代码块。
         then_node = self.parse_statement()
+        # if 节点的前两个孩子固定为：条件表达式、then 分支。
         children = [self.parse_expr(cond_tokens), then_node or ASTNode("EMPTY_STMT", line=line)]
+        # 如果 then 后面紧跟 else，就继续解析 else 分支。
         if self.attr(self.i) == "else":
+            # 消费 else token，让当前位置指向 else 后面的语句。
             self.i += 1
+            # 把 else 分支作为第三个孩子挂到 IF_STMT 上。
             children.append(self.parse_statement() or ASTNode("EMPTY_STMT", line=line))
+        # 返回 IF_STMT 节点，后续 IR 生成会根据这个节点生成条件跳转和回填。
         return ASTNode("IF_STMT", children=children, line=line)
 
     def parse_while(self) -> ASTNode:
+        # while 节点固定组织为：条件表达式 + 循环体语句。
+        # 记录 while 关键字所在行号。
         line = self.line(self.i)
+        # 取出 while(...) 括号内部的条件 token，例如 i < 5。
         cond_tokens, after_cond = self.collect_parenthesized(self.i + 1)
+        # 条件解析完成后，把当前位置移动到循环体开头。
         self.i = after_cond
+        # 解析循环体；循环体同样可以是单条语句或 { ... } 代码块。
         body = self.parse_statement()
+        # 返回 WHILE_STMT，孩子 0 是条件表达式，孩子 1 是循环体。
         return ASTNode("WHILE_STMT", children=[self.parse_expr(cond_tokens), body or ASTNode("EMPTY_STMT", line=line)], line=line)
 
     def parse_for(self) -> ASTNode:
@@ -347,6 +375,7 @@ class ASTBuilder:
         return ASTNode("EXPR_STMT", children=[ASTNode("FUNC_CALL", name, children=arg_nodes, line=line)], line=line)
 
     def parse_expr(self, token_list: List) -> ASTNode:
+        # 表达式按优先级从低到高寻找主运算符，递归拆成二叉表达式树。
         if not token_list:
             return ASTNode("EMPTY_EXPR")
 
@@ -375,6 +404,7 @@ class ASTBuilder:
         return self.parse_postfix(token_list)
 
     def parse_postfix(self, token_list: List) -> ASTNode:
+        # 处理后缀结构：成员访问、数组下标和函数调用，例如 Li.score[i]。
         if not token_list:
             return ASTNode("EMPTY_EXPR")
         if len(token_list) == 1:
@@ -424,6 +454,7 @@ class ASTSemanticAnalyzer:
         self.errors: List[str] = []
 
     def analyze(self, root: ASTNode) -> SymbolTable:
+        # 语义分析只遍历 AST，生成符号表；不再回头扫描 token。
         self.visit(root)
         return self.symbol_table
 
@@ -433,6 +464,7 @@ class ASTSemanticAnalyzer:
     def visit(self, node: Optional[ASTNode]):
         if node is None:
             return
+        # 通过节点 kind 动态分发到 visit_struct_decl、visit_var_decl 等方法。
         method = getattr(self, f"visit_{node.kind.lower()}", self.visit_default)
         return method(node)
 
@@ -441,6 +473,7 @@ class ASTSemanticAnalyzer:
             self.visit(child)
 
     def visit_struct_decl(self, node: ASTNode):
+        # 结构体定义进入符号表，成员也保存为 Symbol，供后续类型和数据段生成使用。
         if self.symbol_table.lookup_struct(node.value):
             self.error(f"结构体重定义: {node.value}", node.line)
             return
@@ -463,6 +496,7 @@ class ASTSemanticAnalyzer:
             self.visit(child)
 
     def visit_var_decl(self, node: ASTNode):
+        # 变量声明进入符号表；初始化表达式本身继续递归访问。
         symbol = Symbol(node.value, SymbolKind.VARIABLE, self.make_type(node.attrs))
         if not self.symbol_table.define(symbol):
             self.error(f"变量重定义: {node.value}", node.line)
@@ -483,6 +517,7 @@ class ASTSemanticAnalyzer:
 class ASTIRGenerator:
     """Generate quadruples by visiting the AST."""
 
+    # 控制流使用“反条件跳转”：条件为假时跳走，条件为真时顺序落入下一条四元式。
     supported_compare_ops = {"<", ">", "<=", ">=", "==", "!="}
     inverse_compare = {"<": ">=", ">": "<=", "<=": ">", ">=": "<", "==": "!=", "!=": "=="}
 
@@ -493,10 +528,12 @@ class ASTIRGenerator:
         self.expr_cache: Dict[Tuple, str] = {}
 
     def generate(self, root: ASTNode):
+        # 每次生成 IR 前清空旧状态，避免多次编译时四元式残留。
         self.ir.clear()
         self.gen_stmt(root)
 
     def gen_stmt(self, node: Optional[ASTNode]):
+        # 按 AST 节点类型分发生成逻辑；复合节点递归处理所有子语句。
         if node is None:
             return
         if node.kind in {"PROGRAM", "COMPOUND_STMT", "DECL_STMT"}:
@@ -526,6 +563,7 @@ class ASTIRGenerator:
         self.expr_cache.clear()
 
     def gen_var_decl(self, node: ASTNode):
+        # 声明没有初始化时不生成四元式；有初始化才展开为赋值/数组写/结构体成员写。
         if not node.children:
             return
         init = node.children[0]
@@ -540,6 +578,7 @@ class ASTIRGenerator:
                 self.clear_expr_cache()
 
     def emit_struct_initializer(self, type_name: str, var_name: str, init: ASTNode):
+        # 结构体初始化按成员顺序展开，例如 Li.name -> Li_name，Li.score -> Li_score。
         members = self.struct_defs.get(type_name, [])
         values = init.children if init and init.kind == "INIT_LIST" else []
         for idx, value_node in enumerate(values):
@@ -556,6 +595,7 @@ class ASTIRGenerator:
                     self.clear_expr_cache()
 
     def emit_array_initializer(self, array_name: str, array_size, init: ASTNode):
+        # 数组初始化逐项生成 []= 四元式，形如 Li_score[2] = 100。
         values = init.children if init and init.kind == "INIT_LIST" else [init]
         for idx, value_node in enumerate(values):
             if array_size is not None and idx >= array_size:
@@ -566,23 +606,39 @@ class ASTIRGenerator:
                 self.clear_expr_cache()
 
     def gen_if(self, node: ASTNode):
+        # if 先生成“条件为假”的跳转，then 块生成完后再把假出口回填到 then 之后。
+        # 先把 IF_STMT 的条件 AST 转成条件三元组，例如 T1 > max。
         cond = self.gen_condition(node.children[0])
+        # 根据反条件生成跳转，占位目标为 0；例如 T1 > max 会生成 j<=。
         false_jumps = self.emit_false_jumps(cond)
+        # 生成 then 分支；如果条件为真，控制流会顺序落入这里。
         self.gen_stmt(node.children[1])
+        # 有 else 分支时，then 执行完需要跳过 else。
         if len(node.children) > 2:
+            # 先生成 then 末尾的无条件跳转，目标仍然占位。
             j_end = self.ir.emit("j", "_", "_", "0")
+            # if 假出口回填到 else 分支的第一条四元式。
             self.patch_jumps(false_jumps, self.ir.next_quad())
+            # 生成 else 分支。
             self.gen_stmt(node.children[2])
+            # then 末尾的无条件跳转回填到整个 if-else 后面。
             self.patch_jump(j_end, self.ir.next_quad())
         else:
+            # 无 else 时，if 假出口直接回填到 then 分支之后。
             self.patch_jumps(false_jumps, self.ir.next_quad())
 
     def gen_while(self, node: ASTNode):
+        # 记录 while 条件入口，循环体末尾会无条件跳回这里。
         cond_start = self.ir.next_quad()
+        # 把 AST 条件转换成 (left, op, right)，例如 i < 5 -> ("i", "<", "5")。
         cond = self.gen_condition(node.children[0])
+        # 生成反条件跳转，目标先占位，等循环体结束后再回填到循环出口。
         false_jumps = self.emit_false_jumps(cond)
+        # 生成 while 循环体；当前样例中这里会生成 if 和 i++。
         self.gen_stmt(node.children[1])
+        # 循环体结束后无条件跳回条件入口，形成 while 的回边。
         self.ir.emit("j", "_", "_", str(cond_start))
+        # 此时 next_quad 就是循环出口，把 while 假出口回填到这里。
         self.patch_jumps(false_jumps, self.ir.next_quad())
 
     def gen_for(self, node: ASTNode):
@@ -597,31 +653,44 @@ class ASTIRGenerator:
         self.patch_jumps(false_jumps, self.ir.next_quad())
 
     def gen_condition(self, node: ASTNode):
+        # 条件表达式统一整理成三元组；非比较表达式按 value != 0 处理。
+        # 逻辑与 && 需要每个子条件都为真；当前实现把每个子条件都生成一个假出口。
         if node.kind == "BINARY_EXPR" and node.value == "&&":
             return ("&&", [self.gen_condition(child) for child in node.children])
+        # 普通比较表达式直接返回 左操作数、比较符、右操作数。
         if node.kind == "BINARY_EXPR" and node.value in self.supported_compare_ops:
             return self.gen_expr(node.children[0]), node.value, self.gen_expr(node.children[1])
+        # 如果条件不是比较表达式，例如 while(x)，就按 x != 0 处理。
         value = self.gen_expr(node)
         return value, "!=", "0"
 
     def emit_false_jumps(self, cond) -> List[int]:
+        # && 条件只要一个子条件为假就要跳出，所以为每个子条件生成假出口。
         if cond and cond[0] == "&&":
             return [self.emit_inverse_cond_jump(part) for part in cond[1]]
+        # 普通条件只需要一条反条件跳转。
         return [self.emit_inverse_cond_jump(cond)]
 
     def emit_inverse_cond_jump(self, cond) -> int:
+        # 例如 < 的反条件是 >=，所以 while(i<5) 会先生成 j>= 跳出循环。
+        # 拆出条件三元组。
         left, op, right = cond
+        # 生成 j<反操作符> 四元式，目标先写 0，等待后续 patch_jump 回填。
         return self.ir.emit(f"j{self.inverse_compare.get(op, '==')}", left, right, "0")
 
     def patch_jump(self, jump_idx: int, target_idx: int):
+        # jump_idx 是之前保存的跳转四元式编号。
         if 0 <= jump_idx < len(self.ir.quadruples):
+            # 把占位目标改成最终四元式编号，例如 0 改成 14 或 17。
             self.ir.quadruples[jump_idx].result = str(target_idx)
 
     def patch_jumps(self, jumps: List[int], target_idx: int):
+        # 批量回填同一个出口，例如 && 条件可能有多个假出口。
         for jump in jumps:
             self.patch_jump(jump, target_idx)
 
     def gen_expr(self, node: Optional[ASTNode]) -> Optional[str]:
+        # 表达式生成返回“结果位置”：变量名、常量或临时变量名。
         if node is None or node.kind == "EMPTY_EXPR":
             return None
         key = self.expr_key(node)
@@ -632,16 +701,26 @@ class ASTIRGenerator:
         elif node.kind == "IDENTIFIER":
             value = self.macros.get(node.value, node.value)
         elif node.kind == "MEMBER_EXPR":
+            # 成员访问先生成基址名，例如 Li，再拼接成员名 score。
             base = self.gen_reference(node.children[0])
+            # 当前 IR 把结构体成员扁平化为 Li_score 这种变量名。
             value = f"{base}_{node.value}"
         elif node.kind == "ARRAY_SUBSCRIPT":
+            # 数组读取先生成 =[] 四元式，把 array[index] 读入临时变量。
+            # 先解析数组本体，Li.score 会通过 gen_reference 变成 Li_score。
             array_name = self.gen_reference(node.children[0])
+            # 再解析下标表达式，当前样例中下标是变量 i。
             index = self.gen_expr(node.children[1])
+            # 为读取出来的数组元素申请临时变量，例如 T1。
             temp = self.ir.new_temp()
+            # 生成 T1 = Li_score[i] 对应的四元式 (=[], Li_score, i, T1)。
             self.ir.emit("=[]", array_name, index, temp)
+            # 数组表达式的结果位置就是这个临时变量。
             value = temp
         elif node.kind == "ASSIGN_EXPR":
+            # 左值可能是普通变量、成员或数组元素，先统一转换成可写位置。
             target = self.gen_lvalue(node.children[0])
+            # 处理 += 和 -=，先读旧值再做加减，最后写回左值。
             if node.value in {"+=", "-="}:
                 old_value = self.gen_expr(node.children[0])
                 rhs = self.gen_expr(node.children[1])
@@ -650,15 +729,23 @@ class ASTIRGenerator:
                 self.ir.emit("=", temp, "_", target)
                 value = target
             else:
+                # 普通赋值先生成右侧表达式，再生成 (=, rhs, _, target)。
                 rhs = self.gen_expr(node.children[1])
                 self.ir.emit("=", rhs, "_", target)
                 value = target
+            # 赋值会改变变量/数组值，清空表达式缓存，避免复用旧结果。
             self.clear_expr_cache()
         elif node.kind == "UNARY_EXPR" and node.value in {"++", "--"}:
+            # i++ / i-- 拆成两条四元式：T=i±1，然后 i=T。
+            # 先拿到要修改的左值位置，例如 i。
             target = self.gen_lvalue(node.children[0])
+            # 申请临时变量保存 i+1 或 i-1 的结果。
             temp = self.ir.new_temp()
+            # 生成 T = i + 1 或 T = i - 1。
             self.ir.emit("+" if node.value == "++" else "-", target, "1", temp)
+            # 再生成 i = T，完成写回。
             self.ir.emit("=", temp, "_", target)
+            # 自增/自减改变变量值，同样清空表达式缓存。
             self.clear_expr_cache()
             value = target
         elif node.kind == "UNARY_EXPR" and node.value == "-":
@@ -701,6 +788,7 @@ class ASTIRGenerator:
         return temp
 
     def emit_printf(self, args: List[ASTNode]):
+        # printf 按格式串拆分，%d/%f/%c 等格式控制会变成不同的 printf 四元式。
         if not args:
             return
         first = args[0]

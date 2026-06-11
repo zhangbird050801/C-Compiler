@@ -127,6 +127,7 @@ class CodeGenerator:
             self.emit_data(f"{label} DB {', '.join(pieces)}")
         
         # 收集所有需要定义的变量（包括结构体成员）
+        # key 是汇编符号名，value 是 DW/DB 定义；统一收集后再排序输出，避免重复定义。
         all_vars: Dict[str, str] = {}
 
         def array_def_size(var_def: str):
@@ -179,6 +180,7 @@ class CodeGenerator:
                     add_var(name, "DW 0")
         
         # 从四元式中补充收集临时变量、结构体展开变量和数组访问变量。
+        # 例如 T1/T2 不在源码符号表中，但四元式使用了它们，汇编数据段必须补定义。
         for quad in self.ir_gen.quadruples:
             if quad.op == "[]=":
                 size = 50
@@ -231,6 +233,7 @@ class CodeGenerator:
     def scan_labels(self):
         """扫描四元式，为跳转目标生成标签"""
         # 四元式的跳转目标是数字编号；汇编需要把这些编号转换成 L0/L1 这样的标签。
+        # 先扫描再生成代码，是为了在遇到第一条跳转前就知道所有目标标签。
         for i, quad in enumerate(self.ir_gen.quadruples):
             if quad.op.startswith("j"):
                 # 跳转指令
@@ -511,33 +514,45 @@ class CodeGenerator:
     
     def gen_jump(self, op: str, arg1: str, arg2: str, label: str):
         """生成跳转代码"""
+        # op == "j" 表示无条件跳转，对应四元式 (j, _, _, target)。
         if op == "j":
             # 无条件跳转
             # label 如果是四元式编号，先查 label_map 转成 L0/L1 这样的汇编标签。
             target = self.label_map.get(int(label) if label.isdigit() else -1, label)
+            # 输出 JMP 目标标签，例如 JMP L2。
             self.emit_code(f"    JMP {target}")
         else:
             # 条件跳转
-            # 比较arg1和arg2
             # 条件跳转先把左右操作数分别装入 AX/BX，再 CMP。
+            # CMP 之后再根据四元式 op 选择 JL/JG/JLE/JGE/JE/JNE。
+            # 如果任一操作数是浮点变量/常量，比较前要按定点缩放处理。
             float_compare = self.is_float_operand(arg1) or self.is_float_operand(arg2)
+            # 左操作数是常量时直接装入 AX。
             if self.is_number(arg1):
+                # 浮点比较使用 fixed_scale 缩放后的整数。
                 left_value = round(float(arg1) * self.fixed_scale) if float_compare else int(float(arg1))
                 self.emit_code(f"    MOV AX, {left_value}")
             else:
+                # 左操作数是变量/临时变量时，从内存装入 AX。
                 self.emit_code(f"    MOV AX, {self.normalize_var_name(arg1)}")
             
+            # 右操作数是常量时直接装入 BX。
             if self.is_number(arg2):
+                # 同样根据是否浮点比较决定是否缩放。
                 right_value = round(float(arg2) * self.fixed_scale) if float_compare else int(float(arg2))
                 self.emit_code(f"    MOV BX, {right_value}")
             else:
+                # 右操作数是变量/临时变量时，从内存装入 BX。
                 self.emit_code(f"    MOV BX, {self.normalize_var_name(arg2)}")
             
+            # CMP 设置标志位，后面的条件跳转根据标志位决定是否跳转。
             self.emit_code(f"    CMP AX, BX")
             
             # 根据操作符选择跳转指令
             # 四元式 j>= 对应汇编 JGE，j<= 对应 JLE。
+            # label 是四元式编号时，需要先转换成 scan_labels 分配的汇编标签。
             target = self.label_map.get(int(label) if label.isdigit() else -1, label)
+            # 四元式条件跳转操作符到 8086 条件跳转指令的映射。
             jump_map = {
                 "j<": "JL",
                 "j>": "JG",
@@ -547,7 +562,9 @@ class CodeGenerator:
                 "j!=": "JNE"
             }
             
+            # 默认兜底为 JMP，正常情况下 op 都会在 jump_map 中。
             jump_inst = jump_map.get(op, "JMP")
+            # 输出最终条件跳转，例如 JGE L0 或 JLE L1。
             self.emit_code(f"    {jump_inst} {target}")
     
     def gen_call(self, func_name: str, param_count: str, result: str):
@@ -618,19 +635,27 @@ class CodeGenerator:
         # result = array[index]
         # 清理数组名（去掉点号）
         # 结构体成员数组 Li.score 在 IR 中已经展开为 Li_score。
+        # 这里再做一次替换，保证出现点号时也能成为合法汇编符号。
         clean_array = array.replace('.', '_')
         
+        # 下标是常量时，可以在编译期算出固定字节偏移。
         if self.is_number(index):
             # 常量下标可以编译期直接换算成字节偏移；DW 元素占 2 字节。
             offset = int(index) * 2  # 假设每个元素2字节
+            # 直接读取 array[offset] 到 AX。
             self.emit_code(f"    MOV AX, {clean_array}[{offset}]")
         else:
             # 变量下标运行时计算偏移：BX = index * 2。
+            # 8086 的 word 数组按字节寻址，所以 i 要左移一位后才能作为偏移。
+            # 先把变量下标 i 装入 BX。
             self.emit_code(f"    MOV BX, {index}")
+            # 左移 1 位等价于乘以 2，得到 word 数组的字节偏移。
             self.emit_code(f"    SHL BX, 1  ; 乘以2")
+            # 用 BX 作为偏移读取数组元素。
             self.emit_code(f"    MOV AX, {clean_array}[BX]")
         
         # 数组元素读入 AX 后，写入四元式指定的临时变量 result。
+        # 例如把 Li_score[i] 的值写入 T1。
         self.emit_code(f"    MOV {result}, AX")
     
     def gen_array_store(self, array: str, index: str, value: str):
@@ -638,6 +663,7 @@ class CodeGenerator:
         # array[index] = value
         # 清理数组名
         # 写数组时同样先把数组名规范化，避免结构体点号影响汇编符号。
+        # 例如 Li.score 会变成 Li_score。
         clean_array = array.replace('.', '_')
         
         # 处理值
@@ -646,20 +672,28 @@ class CodeGenerator:
             # 尝试转换为浮点数，使用四舍五入
             float_val = float(value)
             int_val = round(float_val)
+            # 数组初始化里的 80、90、100 等常量会走这里。
             self.emit_code(f"    MOV AX, {int_val}  ; 浮点数 {value} 四舍五入")
         except ValueError:
             # 不是数字，是变量名
             # 变量值从内存装入 AX。
+            # 如果 value 是 T1 或普通变量，就先把它装入 AX。
             self.emit_code(f"    MOV AX, {value}")
         
+        # 常量下标可以直接写固定偏移。
         if self.is_number(index):
             # 常量下标直接写固定偏移。
             offset = int(index) * 2
+            # 把 AX 写入 array[offset]。
             self.emit_code(f"    MOV {clean_array}[{offset}], AX")
         else:
             # 变量下标运行时换算成字节偏移后写入。
+            # 与数组读取相同，word 数组需要使用 index * 2 作为字节偏移。
+            # 先把变量下标装入 BX。
             self.emit_code(f"    MOV BX, {index}")
+            # 再把下标换算成字节偏移。
             self.emit_code(f"    SHL BX, 1")
+            # 最后把 AX 写入 array[BX]。
             self.emit_code(f"    MOV {clean_array}[BX], AX")
     
     def is_number(self, s: str) -> bool:
