@@ -4,7 +4,7 @@ C 语言编译器实验 - 完整编译流程可视化
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, scrolledtext, messagebox, ttk, font
-from lexer_core import Lexer, TYPES, EOF
+from lexer_core import Lexer, TYPES
 
 try:
     from parser_core import LL1Parser
@@ -22,21 +22,6 @@ try:
     from ast_core import ASTRenderer
 except ImportError:
     ASTRenderer = None
-
-try:
-    from semantic_analyzer import SemanticAnalyzer
-except ImportError:
-    SemanticAnalyzer = None
-
-try:
-    from ir_generator import IRGenerator
-except ImportError:
-    IRGenerator = None
-
-try:
-    from codegen import CodeGen
-except ImportError:
-    CodeGen = None
 
 class LexerApp(tk.Tk):
     def __init__(self):
